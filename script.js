@@ -1,21 +1,20 @@
 console.log("Script loaded");
 
-let classes = [];
-let activeTab = []; // tracks active tab per class (0 = Assignments, 1 = Tests)
+let classes = JSON.parse(localStorage.getItem("classes")) || [];
 
-// Initialize from memory or start fresh
-async function loadData() {
-    try {
-        const result = await window.storage.get('classes');
-        if (result && result.value) {
-            classes = JSON.parse(result.value);
-        }
-    } catch (error) {
-        console.log('No saved data found, starting fresh');
-        classes = [];
+// Migrate old data: convert 'readiness' to 'prepared' if needed
+classes.forEach(cls => {
+    if (cls.tests) {
+        cls.tests.forEach(test => {
+            if (test.readiness !== undefined && test.prepared === undefined) {
+                test.prepared = test.readiness;
+                delete test.readiness;
+            }
+        });
     }
-    render();
-}
+});
+
+let activeTab = []; // tracks active tab per class (0 = Assignments, 1 = Tests)
 
 // ELEMENTS
 const addClassBtn = document.getElementById("addClassBtn");
@@ -23,12 +22,8 @@ const classInput = document.getElementById("classInput");
 const classesContainer = document.getElementById("classesContainer");
 
 // SAVE
-async function save() {
-    try {
-        await window.storage.set('classes', JSON.stringify(classes));
-    } catch (error) {
-        console.error('Failed to save:', error);
-    }
+function save() {
+    localStorage.setItem("classes", JSON.stringify(classes));
 }
 
 // HELPER: due-in text
@@ -250,9 +245,4 @@ function render() {
 }
 
 // INIT
-if (typeof window.storage !== 'undefined') {
-    loadData();
-} else {
-    // Fallback for environments without storage
-    render();
-}
+render();
