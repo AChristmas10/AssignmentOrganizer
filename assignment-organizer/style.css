@@ -1,0 +1,126 @@
+/* ---------- GENERAL ---------- */
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    padding: 20px;
+}
+
+h1 {
+    margin-bottom: 10px;
+}
+
+/* ---------- ADD CLASS ---------- */
+.add-class {
+    margin-bottom: 20px;
+}
+
+.add-class input {
+    padding: 6px;
+    margin-right: 5px;
+}
+
+.add-class button {
+    padding: 6px 10px;
+    cursor: pointer;
+}
+
+/* ---------- CLASS CARD ---------- */
+.class-card {
+    background: white;
+    padding: 15px;
+    margin-bottom: 15px;
+    border-radius: 8px;
+}
+
+/* Class header with toggle arrow and remove button */
+.class-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+}
+
+.class-header h2 {
+    margin: 0;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.class-header .assignment-count {
+    width: 120px;
+    text-align: right;
+    font-size: 0.9em;
+    color: #555;
+    margin-right: 5px;
+}
+
+/* Remove class button under the toggle arrow */
+.remove-class-btn-container {
+    margin-top: 6px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.remove-class-btn-container button {
+    background: #ddd;
+    color: #333;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* ---------- ASSIGNMENTS & TESTS ---------- */
+.assignment, .test {
+    padding: 8px;
+    margin-bottom: 6px;
+    border-radius: 4px;
+    background: #fff;
+    border-left: 4px solid #4CAF50; /* default green for assignments */
+}
+
+.test {
+    border-left-color: #e67e22; /* subtle orange for tests */
+    background: #fafafa; /* slightly different bg for tests */
+}
+
+.completed-label {
+    margin-top: 6px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: #2ecc71;
+}
+
+/* ---------- ADD ASSIGNMENT + ADD TEST AREA ---------- */
+.add-assignment-test {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.add-assignment-test > div {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.add-assignment-test input[type="number"] {
+    width: 60px;
+}
+
+/* ---------- TOGGLE CONTAINER ---------- */
+#items-container {
+    margin-top: 10px;
+}
+
+/* ---------- BUTTONS ---------- */
+button {
+    cursor: pointer;
+}
+
+button:hover {
+    opacity: 0.9;
+}
