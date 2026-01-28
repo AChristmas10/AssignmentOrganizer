@@ -29,7 +29,9 @@ function save() {
 // HELPER: due-in text
 function dueInText(dueDateStr) {
     const today = new Date();
-    const dueDate = new Date(dueDateStr);
+    // Parse date as local time, not UTC
+    const [year, month, day] = dueDateStr.split('-').map(Number);
+    const dueDate = new Date(year, month - 1, day);
 
     today.setHours(0,0,0,0);
     dueDate.setHours(0,0,0,0);
@@ -51,7 +53,9 @@ function dueInText(dueDateStr) {
 
 // HELPER: format MM/DD
 function formatDate(dueDateStr) {
-    const d = new Date(dueDateStr);
+    // Parse date as local time, not UTC
+    const [year, month, day] = dueDateStr.split('-').map(Number);
+    const d = new Date(year, month - 1, day);
     const mm = String(d.getMonth()+1).padStart(2,'0');
     const dd = String(d.getDate()).padStart(2,'0');
     return `${mm}/${dd}`;
