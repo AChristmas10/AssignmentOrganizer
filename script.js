@@ -276,6 +276,9 @@ function switchView(view) {
 function renderAllItems() {
     const container = document.getElementById('allItemsContainer');
 
+    // Get current filter (default to 'all')
+    if (!window.allItemsFilter) window.allItemsFilter = 'all';
+
     // Collect all assignments and tests with their class info
     let allItems = [];
 
@@ -305,17 +308,43 @@ function renderAllItems() {
         });
     });
 
+    // Filter based on current filter
+    if (window.allItemsFilter === 'assignments') {
+        allItems = allItems.filter(item => item.type === 'assignment');
+    } else if (window.allItemsFilter === 'tests') {
+        allItems = allItems.filter(item => item.type === 'test');
+    }
+
     // Sort by date
     allItems.sort((a, b) => new Date(a.date) - new Date(b.date));
 
     if (allItems.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">No assignments or tests yet. Add some in the "My Classes" tab!</p>';
+        const filterText = window.allItemsFilter === 'all' ? 'No assignments or tests yet. Add some in the "My Classes" tab!' :
+            window.allItemsFilter === 'assignments' ? 'No assignments yet. Add some in the "My Classes" tab!' :
+                'No tests yet. Add some in the "My Classes" tab!';
+        container.innerHTML = `
+            <div style="max-width: 800px; margin: 0 auto;">
+                <div class="filter-tabs">
+                    <button class="filter-tab ${window.allItemsFilter === 'all' ? 'active' : ''}" onclick="setAllItemsFilter('all')">All</button>
+                    <button class="filter-tab ${window.allItemsFilter === 'assignments' ? 'active' : ''}" onclick="setAllItemsFilter('assignments')">Assignments</button>
+                    <button class="filter-tab ${window.allItemsFilter === 'tests' ? 'active' : ''}" onclick="setAllItemsFilter('tests')">Tests</button>
+                </div>
+                <p style="text-align:center; color:#999; padding:40px;">${filterText}</p>
+            </div>
+        `;
         return;
     }
 
     container.innerHTML = `
         <div style="max-width: 800px; margin: 0 auto;">
             <h2 style="margin-bottom: 20px;">All Assignments & Tests</h2>
+            
+            <div class="filter-tabs">
+                <button class="filter-tab ${window.allItemsFilter === 'all' ? 'active' : ''}" onclick="setAllItemsFilter('all')">All</button>
+                <button class="filter-tab ${window.allItemsFilter === 'assignments' ? 'active' : ''}" onclick="setAllItemsFilter('assignments')">Assignments</button>
+                <button class="filter-tab ${window.allItemsFilter === 'tests' ? 'active' : ''}" onclick="setAllItemsFilter('tests')">Tests</button>
+            </div>
+            
             ${allItems.map(item => {
         const isAssignment = item.type === 'assignment';
         const completed = isAssignment ? item.progress === 10 : item.prepared === 10;
@@ -349,4 +378,10 @@ function renderAllItems() {
     }).join('')}
         </div>
     `;
+}
+
+// SET FILTER FOR ALL ITEMS VIEW
+function setAllItemsFilter(filter) {
+    window.allItemsFilter = filter;
+    renderAllItems();
 }
