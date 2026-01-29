@@ -103,8 +103,40 @@ function addAssignment(classIndex){
     });
     nameInput.value = '';
     dueInput.value = '';
-    timeInput.value = '';
+    timeInput.value = '23:59';
+
+    // Hide the form after adding
+    document.getElementById(`add-assignment-form-${classIndex}`).style.display = 'none';
+
     render(); save();
+}
+
+// TOGGLE ADD ASSIGNMENT FORM
+function toggleAddAssignment(classIndex) {
+    const form = document.getElementById(`add-assignment-form-${classIndex}`);
+    const testForm = document.getElementById(`add-test-form-${classIndex}`);
+
+    // Hide test form if open
+    testForm.style.display = 'none';
+
+    // Toggle assignment form
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+// CANCEL ADD ASSIGNMENT
+function cancelAddAssignment(classIndex) {
+    const form = document.getElementById(`add-assignment-form-${classIndex}`);
+    const nameInput = document.getElementById(`a-name-${classIndex}`);
+    const dueInput = document.getElementById(`a-due-${classIndex}`);
+    const timeInput = document.getElementById(`a-time-${classIndex}`);
+
+    // Clear inputs
+    nameInput.value = '';
+    dueInput.value = '';
+    timeInput.value = '23:59';
+
+    // Hide form
+    form.style.display = 'none';
 }
 
 // UPDATE ASSIGNMENT PROGRESS
@@ -128,7 +160,37 @@ function addTest(classIndex){
     classes[classIndex].tests.push({ name:testName, date:dateInput.value, prepared:0 });
     nameInput.value = '';
     dateInput.value = '';
+
+    // Hide the form after adding
+    document.getElementById(`add-test-form-${classIndex}`).style.display = 'none';
+
     render(); save();
+}
+
+// TOGGLE ADD TEST FORM
+function toggleAddTest(classIndex) {
+    const form = document.getElementById(`add-test-form-${classIndex}`);
+    const assignmentForm = document.getElementById(`add-assignment-form-${classIndex}`);
+
+    // Hide assignment form if open
+    assignmentForm.style.display = 'none';
+
+    // Toggle test form
+    form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+// CANCEL ADD TEST
+function cancelAddTest(classIndex) {
+    const form = document.getElementById(`add-test-form-${classIndex}`);
+    const nameInput = document.getElementById(`t-name-${classIndex}`);
+    const dateInput = document.getElementById(`t-date-${classIndex}`);
+
+    // Clear inputs
+    nameInput.value = '';
+    dateInput.value = '';
+
+    // Hide form
+    form.style.display = 'none';
 }
 
 // UPDATE TEST PREPARED
@@ -179,21 +241,34 @@ function render() {
         </div>
 
         <div id="items-container-${classIndex}" style="display:${cls.isOpen ? 'block' : 'none'}; margin-top:10px;">
-            <!-- Add Assignment -->
-            <div style="margin-bottom:10px;">
+            <!-- Add buttons -->
+            <div style="margin-bottom:10px; display:flex; gap:8px;">
+                <button onclick="toggleAddAssignment(${classIndex})" id="show-add-assignment-${classIndex}">+ Add Assignment</button>
+                <button onclick="toggleAddTest(${classIndex})" id="show-add-test-${classIndex}">+ Add Test</button>
+            </div>
+            
+            <!-- Add Assignment Form (hidden by default) -->
+            <div id="add-assignment-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
                 <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <input id="a-name-${classIndex}" placeholder="Assignment name" style="flex: 1; min-width: 150px;">
                     <input id="a-due-${classIndex}" type="date" style="width: 140px;">
                     <input id="a-time-${classIndex}" type="time" value="23:59" style="width: 100px;">
-                    <button onclick="addAssignment(${classIndex})">Add Assignment</button>
                 </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="addAssignment(${classIndex})">Save Assignment</button>
+                    <button onclick="cancelAddAssignment(${classIndex})" style="background:#ccc;">Cancel</button>
+                </div>
+            </div>
                 
-                <!-- Add Test -->
-                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+            <!-- Add Test Form (hidden by default) -->
+            <div id="add-test-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
+                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <input id="t-name-${classIndex}" placeholder="Test name" style="flex: 1; min-width: 150px;">
                     <input id="t-date-${classIndex}" type="date" style="width: 140px;">
-                    <span style="width: 100px;"></span>
-                    <button onclick="addTest(${classIndex})">Add Test</button>
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <button onclick="addTest(${classIndex})">Save Test</button>
+                    <button onclick="cancelAddTest(${classIndex})" style="background:#ccc;">Cancel</button>
                 </div>
             </div>
 
