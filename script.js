@@ -61,6 +61,15 @@ function formatDate(dueDateStr) {
     return `${mm}/${dd}`;
 }
 
+// HELPER: format time (24hr to 12hr)
+function formatTime(timeStr) {
+    if (!timeStr) return '';
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+}
+
 // ADD CLASS
 addClassBtn.addEventListener("click", ()=> {
     let name = classInput.value.trim().slice(0,25);
@@ -82,11 +91,19 @@ function removeClass(classIndex) {
 function addAssignment(classIndex){
     const nameInput = document.getElementById(`a-name-${classIndex}`);
     const dueInput = document.getElementById(`a-due-${classIndex}`);
+    const timeInput = document.getElementById(`a-time-${classIndex}`);
     if(!nameInput.value || !dueInput.value) return;
     const assignmentName = nameInput.value.trim().slice(0,30);
-    classes[classIndex].assignments.push({ name:assignmentName, due:dueInput.value, progress:0 });
+    const dueTime = timeInput.value || '23:59'; // Default to 11:59 PM
+    classes[classIndex].assignments.push({
+        name: assignmentName,
+        due: dueInput.value,
+        time: dueTime,
+        progress: 0
+    });
     nameInput.value = '';
     dueInput.value = '';
+    timeInput.value = '';
     render(); save();
 }
 
@@ -162,18 +179,20 @@ function render() {
         </div>
 
         <div id="items-container-${classIndex}" style="display:${cls.isOpen ? 'block' : 'none'}; margin-top:10px;">
-            <div style="margin-bottom:10px; display:flex; gap:10px; flex-wrap:wrap;">
-                <!-- Add Assignment -->
-                <div style="display:flex; gap:4px; align-items:center;">
-                    <input id="a-name-${classIndex}" placeholder="Assignment name">
-                    <input id="a-due-${classIndex}" type="date">
+            <!-- Add Assignment -->
+            <div style="margin-bottom:10px;">
+                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
+                    <input id="a-name-${classIndex}" placeholder="Assignment name" style="flex: 1; min-width: 150px;">
+                    <input id="a-due-${classIndex}" type="date" style="width: 140px;">
+                    <input id="a-time-${classIndex}" type="time" value="23:59" style="width: 100px;">
                     <button onclick="addAssignment(${classIndex})">Add Assignment</button>
                 </div>
-
+                
                 <!-- Add Test -->
-                <div style="display:flex; gap:4px; align-items:center;">
-                    <input id="t-name-${classIndex}" placeholder="Test name">
-                    <input id="t-date-${classIndex}" type="date">
+                <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+                    <input id="t-name-${classIndex}" placeholder="Test name" style="flex: 1; min-width: 150px;">
+                    <input id="t-date-${classIndex}" type="date" style="width: 140px;">
+                    <span style="width: 100px;"></span>
                     <button onclick="addTest(${classIndex})">Add Test</button>
                 </div>
             </div>
@@ -183,13 +202,14 @@ function render() {
             ${sortedAssignments.map((a) => {
             const completed = a.progress === 10;
             const displayAssignmentName = a.name.length > 30 ? a.name.slice(0,30) + "…" : a.name;
+            const timeDisplay = a.time ? formatTime(a.time) : '';
             return `
             <div class="assignment ${completed ? 'completed' : ''}">
                 <div style="display:flex; justify-content: space-between; align-items:center;">
                     <div>
                         <strong title="${a.name}">${displayAssignmentName}</strong>
                         <span style="font-size:0.85em; color:#555; margin-left:8px;">
-                            ${formatDate(a.due)} (${dueInText(a.due)})
+                            ${formatDate(a.due)}${timeDisplay ? ' at ' + timeDisplay : ''} (${dueInText(a.due)})
                         </span>
                     </div>
                 </div>
@@ -299,6 +319,7 @@ function renderAllItems() {
                 type: 'assignment',
                 name: assignment.name,
                 date: assignment.due,
+                time: assignment.time,
                 progress: assignment.progress,
                 className: cls.name,
                 classIndex: classIndex,
@@ -372,7 +393,7 @@ function renderAllItems() {
                                 </span>
                             </div>
                             <span style="font-size:0.85em; color:#555; margin-top: 4px; display: block;">
-                                ${formatDate(item.date)} (${dueInText(item.date)})
+                                ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''} (${dueInText(item.date)})
                             </span>
                         </div>
                     </div>
