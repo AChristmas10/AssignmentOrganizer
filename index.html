@@ -25,27 +25,38 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 
     <link rel="stylesheet" href="style.css">
-        
+
     <!-- Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-SQ6GKNLWML"></script>
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
 
-      gtag('config', 'G-SQ6GKNLWML');
+        gtag('config', 'G-SQ6GKNLWML');
     </script>
 </head>
 <body>
 
 <h1>📚 Assignment Organizer</h1>
 
-<div class="add-class">
-    <input id="classInput" placeholder="Enter class name">
-    <button id="addClassBtn">Add Class</button>
+<div class="tabs">
+    <button id="classesTab" class="tab-button active" onclick="switchView('classes')">My Classes</button>
+    <button id="allItemsTab" class="tab-button" onclick="switchView('allItems')">All Items</button>
 </div>
 
-<div id="classesContainer"></div>
+<div id="classesView">
+    <div class="add-class">
+        <input id="classInput" placeholder="Enter class name">
+        <button id="addClassBtn">Add Class</button>
+    </div>
+
+    <div id="classesContainer"></div>
+</div>
+
+<div id="allItemsView" style="display:none;">
+    <div id="allItemsContainer"></div>
+</div>
 
 <script src="script.js"></script>
 </body>

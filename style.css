@@ -9,6 +9,35 @@ h1 {
     margin-bottom: 10px;
 }
 
+/* ---------- TABS ---------- */
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    border: none;
+    background: #e0e0e0;
+    cursor: pointer;
+    border-radius: 5px 5px 0 0;
+    font-size: 1em;
+    transition: background 0.3s;
+}
+
+.tab-button:hover {
+    background: #d0d0d0;
+}
+
+.tab-button.active {
+    background: #4CAF50;
+    color: white;
+    font-weight: bold;
+}
+
 /* ---------- ADD CLASS ---------- */
 .add-class {
     margin-bottom: 20px;

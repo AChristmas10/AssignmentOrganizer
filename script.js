@@ -250,3 +250,103 @@ function render() {
 
 // INIT
 render();
+
+// VIEW SWITCHING
+function switchView(view) {
+    const classesView = document.getElementById('classesView');
+    const allItemsView = document.getElementById('allItemsView');
+    const classesTab = document.getElementById('classesTab');
+    const allItemsTab = document.getElementById('allItemsTab');
+
+    if (view === 'classes') {
+        classesView.style.display = 'block';
+        allItemsView.style.display = 'none';
+        classesTab.classList.add('active');
+        allItemsTab.classList.remove('active');
+    } else {
+        classesView.style.display = 'none';
+        allItemsView.style.display = 'block';
+        classesTab.classList.remove('active');
+        allItemsTab.classList.add('active');
+        renderAllItems();
+    }
+}
+
+// RENDER ALL ITEMS VIEW
+function renderAllItems() {
+    const container = document.getElementById('allItemsContainer');
+
+    // Collect all assignments and tests with their class info
+    let allItems = [];
+
+    classes.forEach((cls, classIndex) => {
+        cls.assignments.forEach((assignment, assignmentIndex) => {
+            allItems.push({
+                type: 'assignment',
+                name: assignment.name,
+                date: assignment.due,
+                progress: assignment.progress,
+                className: cls.name,
+                classIndex: classIndex,
+                itemIndex: assignmentIndex
+            });
+        });
+
+        cls.tests.forEach((test, testIndex) => {
+            allItems.push({
+                type: 'test',
+                name: test.name,
+                date: test.date,
+                prepared: test.prepared,
+                className: cls.name,
+                classIndex: classIndex,
+                itemIndex: testIndex
+            });
+        });
+    });
+
+    // Sort by date
+    allItems.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    if (allItems.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#999; padding:40px;">No assignments or tests yet. Add some in the "My Classes" tab!</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <div style="max-width: 800px; margin: 0 auto;">
+            <h2 style="margin-bottom: 20px;">All Assignments & Tests</h2>
+            ${allItems.map(item => {
+        const isAssignment = item.type === 'assignment';
+        const completed = isAssignment ? item.progress === 10 : item.prepared === 10;
+        const displayName = item.name.length > 40 ? item.name.slice(0,40) + "…" : item.name;
+
+        return `
+                <div class="${item.type} ${completed ? 'completed' : ''}" style="margin-bottom: 10px;">
+                    <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 8px;">
+                        <div style="flex: 1;">
+                            <div style="display:flex; align-items:center; gap: 8px; flex-wrap: wrap;">
+                                <strong title="${item.name}">${displayName}</strong>
+                                <span style="background: #e0e0e0; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
+                                    ${item.className}
+                                </span>
+                            </div>
+                            <span style="font-size:0.85em; color:#555; margin-top: 4px; display: block;">
+                                ${formatDate(item.date)} (${dueInText(item.date)})
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap: 10px;">
+                        <span style="min-width: 80px;">${isAssignment ? 'Progress:' : 'Prepared:'}</span>
+                        <input type="range" min="0" max="10" value="${isAssignment ? item.progress : item.prepared}" 
+                               oninput="${isAssignment ? 'updateAssignmentProgress' : 'updateTestPrepared'}(${item.classIndex},${item.itemIndex},this.value); renderAllItems();"
+                               style="flex: 1;">
+                        <span style="min-width: 40px;">${isAssignment ? item.progress : item.prepared}/10</span>
+                    </div>
+                    ${completed ? `<div class="completed-label">✔ ${isAssignment ? 'Completed' : 'Ready'}</div>` : ''}
+                </div>
+                `;
+    }).join('')}
+        </div>
+    `;
+}
