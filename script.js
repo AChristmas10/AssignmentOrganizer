@@ -255,20 +255,31 @@ render();
 function switchView(view) {
     const classesView = document.getElementById('classesView');
     const allItemsView = document.getElementById('allItemsView');
+    const calendarView = document.getElementById('calendarView');
     const classesTab = document.getElementById('classesTab');
     const allItemsTab = document.getElementById('allItemsTab');
+    const calendarTab = document.getElementById('calendarTab');
 
+    // Hide all views and deactivate all tabs
+    classesView.style.display = 'none';
+    allItemsView.style.display = 'none';
+    calendarView.style.display = 'none';
+    classesTab.classList.remove('active');
+    allItemsTab.classList.remove('active');
+    calendarTab.classList.remove('active');
+
+    // Show selected view and activate tab
     if (view === 'classes') {
         classesView.style.display = 'block';
-        allItemsView.style.display = 'none';
         classesTab.classList.add('active');
-        allItemsTab.classList.remove('active');
-    } else {
-        classesView.style.display = 'none';
+    } else if (view === 'allItems') {
         allItemsView.style.display = 'block';
-        classesTab.classList.remove('active');
         allItemsTab.classList.add('active');
         renderAllItems();
+    } else if (view === 'calendar') {
+        calendarView.style.display = 'block';
+        calendarTab.classList.add('active');
+        renderCalendar();
     }
 }
 
@@ -384,4 +395,142 @@ function renderAllItems() {
 function setAllItemsFilter(filter) {
     window.allItemsFilter = filter;
     renderAllItems();
+}
+
+// CALENDAR VIEW
+if (!window.currentCalendarDate) {
+    window.currentCalendarDate = new Date();
+}
+
+function renderCalendar() {
+    const container = document.getElementById('calendarContainer');
+    const date = window.currentCalendarDate;
+    const year = date.getFullYear();
+    const month = date.getMonth();
+
+    // Get first day of month and number of days
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+        'July', 'August', 'September', 'October', 'November', 'December'];
+
+    // Collect all items for this month
+    let itemsByDate = {};
+    classes.forEach((cls, classIndex) => {
+        cls.assignments.forEach((assignment, assignmentIndex) => {
+            const dateKey = assignment.due;
+            if (!itemsByDate[dateKey]) itemsByDate[dateKey] = [];
+            itemsByDate[dateKey].push({
+                type: 'assignment',
+                name: assignment.name,
+                className: cls.name,
+                progress: assignment.progress,
+                classIndex: classIndex,
+                itemIndex: assignmentIndex
+            });
+        });
+
+        cls.tests.forEach((test, testIndex) => {
+            const dateKey = test.date;
+            if (!itemsByDate[dateKey]) itemsByDate[dateKey] = [];
+            itemsByDate[dateKey].push({
+                type: 'test',
+                name: test.name,
+                className: cls.name,
+                prepared: test.prepared,
+                classIndex: classIndex,
+                itemIndex: testIndex
+            });
+        });
+    });
+
+    // Build calendar HTML
+    let calendarHTML = `
+        <div style="max-width: 1000px; margin: 0 auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button onclick="changeMonth(-1)" style="padding: 8px 16px; cursor: pointer;">◀ Previous</button>
+                <h2>${monthNames[month]} ${year}</h2>
+                <button onclick="changeMonth(1)" style="padding: 8px 16px; cursor: pointer;">Next ▶</button>
+            </div>
+            
+            <div class="calendar-grid">
+                <div class="calendar-day-header">Sun</div>
+                <div class="calendar-day-header">Mon</div>
+                <div class="calendar-day-header">Tue</div>
+                <div class="calendar-day-header">Wed</div>
+                <div class="calendar-day-header">Thu</div>
+                <div class="calendar-day-header">Fri</div>
+                <div class="calendar-day-header">Sat</div>
+    `;
+
+    // Add empty cells for days before month starts
+    for (let i = 0; i < firstDay; i++) {
+        calendarHTML += '<div class="calendar-day empty"></div>';
+    }
+
+    // Add days of the month
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const dateKey = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const items = itemsByDate[dateKey] || [];
+        const cellDate = new Date(year, month, day);
+        const isToday = cellDate.getTime() === today.getTime();
+
+        calendarHTML += `
+            <div class="calendar-day ${isToday ? 'today' : ''}">
+                <div class="day-number">${day}</div>
+                <div class="day-items">
+        `;
+
+        // Add items for this day
+        items.forEach(item => {
+            const isAssignment = item.type === 'assignment';
+            const completed = isAssignment ? item.progress === 10 : item.prepared === 10;
+            const displayName = item.name.length > 15 ? item.name.slice(0, 15) + '…' : item.name;
+
+            calendarHTML += `
+                <div class="calendar-item ${item.type} ${completed ? 'completed' : ''}" 
+                     title="${item.name} - ${item.className}">
+                    <span class="item-name">${displayName}</span>
+                </div>
+            `;
+        });
+
+        calendarHTML += `
+                </div>
+            </div>
+        `;
+    }
+
+    calendarHTML += `
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
+                <div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 20px; height: 20px; background: #4CAF50; border-radius: 3px;"></div>
+                        <span>Assignment</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 20px; height: 20px; background: #e67e22; border-radius: 3px;"></div>
+                        <span>Test</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <div style="width: 20px; height: 20px; background: #ddd; border-radius: 3px;"></div>
+                        <span>Completed</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = calendarHTML;
+}
+
+function changeMonth(delta) {
+    const date = window.currentCalendarDate;
+    date.setMonth(date.getMonth() + delta);
+    renderCalendar();
 }
