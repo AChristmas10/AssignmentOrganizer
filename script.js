@@ -144,22 +144,28 @@ function updateAssignmentProgress(classIndex, assignmentIndex, value){
     const oldProgress = classes[classIndex].assignments[assignmentIndex].progress;
     classes[classIndex].assignments[assignmentIndex].progress = Number(value);
 
-    // Update the display value immediately - find the exact element
+    // Update the display value immediately
     if (event && event.target) {
         const slider = event.target;
-        // The structure is: <div>Progress: <input> X/10</div>
-        // So the next sibling text node after the slider contains "X/10"
         const parentDiv = slider.parentElement;
-        const textNodes = Array.from(parentDiv.childNodes);
 
-        // Find the text node that comes after the input
-        for (let i = 0; i < textNodes.length; i++) {
-            if (textNodes[i] === slider && i < textNodes.length - 1) {
-                // The next node should be the text with "X/10"
-                const nextNode = textNodes[i + 1];
-                if (nextNode.nodeType === Node.TEXT_NODE) {
-                    nextNode.textContent = ` ${value}/10`;
-                    break;
+        // Try to find a span first (All Items view)
+        const spans = parentDiv.querySelectorAll('span');
+        const lastSpan = spans[spans.length - 1];
+
+        if (lastSpan && lastSpan.textContent.includes('/10')) {
+            // All Items view - update the span
+            lastSpan.textContent = `${value}/10`;
+        } else {
+            // My Classes view - update the text node
+            const textNodes = Array.from(parentDiv.childNodes);
+            for (let i = 0; i < textNodes.length; i++) {
+                if (textNodes[i] === slider && i < textNodes.length - 1) {
+                    const nextNode = textNodes[i + 1];
+                    if (nextNode.nodeType === Node.TEXT_NODE) {
+                        nextNode.textContent = ` ${value}/10`;
+                        break;
+                    }
                 }
             }
         }
@@ -172,6 +178,11 @@ function updateAssignmentProgress(classIndex, assignmentIndex, value){
     // Only re-render if completion status changed
     if (wasCompleted !== isCompleted) {
         render();
+        // Also update All Items if it's currently visible
+        const allItemsView = document.getElementById('allItemsView');
+        if (allItemsView && allItemsView.style.display !== 'none') {
+            renderAllItems();
+        }
     }
 
     save();
@@ -230,22 +241,28 @@ function updateTestPrepared(classIndex, testIndex, value){
     const oldPrepared = classes[classIndex].tests[testIndex].prepared;
     classes[classIndex].tests[testIndex].prepared = Number(value);
 
-    // Update the display value immediately - find the exact element
+    // Update the display value immediately
     if (event && event.target) {
         const slider = event.target;
-        // The structure is: <div>Prepared: <input> X/10</div>
-        // So the next sibling text node after the slider contains "X/10"
         const parentDiv = slider.parentElement;
-        const textNodes = Array.from(parentDiv.childNodes);
 
-        // Find the text node that comes after the input
-        for (let i = 0; i < textNodes.length; i++) {
-            if (textNodes[i] === slider && i < textNodes.length - 1) {
-                // The next node should be the text with "X/10"
-                const nextNode = textNodes[i + 1];
-                if (nextNode.nodeType === Node.TEXT_NODE) {
-                    nextNode.textContent = ` ${value}/10`;
-                    break;
+        // Try to find a span first (All Items view)
+        const spans = parentDiv.querySelectorAll('span');
+        const lastSpan = spans[spans.length - 1];
+
+        if (lastSpan && lastSpan.textContent.includes('/10')) {
+            // All Items view - update the span
+            lastSpan.textContent = `${value}/10`;
+        } else {
+            // My Classes view - update the text node
+            const textNodes = Array.from(parentDiv.childNodes);
+            for (let i = 0; i < textNodes.length; i++) {
+                if (textNodes[i] === slider && i < textNodes.length - 1) {
+                    const nextNode = textNodes[i + 1];
+                    if (nextNode.nodeType === Node.TEXT_NODE) {
+                        nextNode.textContent = ` ${value}/10`;
+                        break;
+                    }
                 }
             }
         }
@@ -258,6 +275,11 @@ function updateTestPrepared(classIndex, testIndex, value){
     // Only re-render if completion status changed
     if (wasCompleted !== isCompleted) {
         render();
+        // Also update All Items if it's currently visible
+        const allItemsView = document.getElementById('allItemsView');
+        if (allItemsView && allItemsView.style.display !== 'none') {
+            renderAllItems();
+        }
     }
 
     save();
