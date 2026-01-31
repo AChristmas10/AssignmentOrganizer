@@ -628,6 +628,7 @@ function renderCalendar() {
                 type: 'assignment',
                 name: assignment.name,
                 className: cls.name,
+                classColor: cls.color,
                 progress: assignment.progress,
                 classIndex: classIndex,
                 itemIndex: assignmentIndex
@@ -641,6 +642,7 @@ function renderCalendar() {
                 type: 'test',
                 name: test.name,
                 className: cls.name,
+                classColor: cls.color,
                 prepared: test.prepared,
                 classIndex: classIndex,
                 itemIndex: testIndex
@@ -695,7 +697,8 @@ function renderCalendar() {
             const displayName = item.name.length > 15 ? item.name.slice(0, 15) + '…' : item.name;
 
             calendarHTML += `
-                <div class="calendar-item ${item.type} ${completed ? 'completed' : ''}" 
+                <div class="calendar-item ${completed ? 'completed' : ''}" 
+                     style="background: ${completed ? 'var(--bg-tertiary)' : item.classColor}; color: ${completed ? 'var(--text-secondary)' : 'white'};"
                      title="${item.name} - ${item.className}">
                     <span class="item-name">${displayName}</span>
                 </div>
@@ -714,12 +717,7 @@ function renderCalendar() {
             <div class="calendar-legend">
                 <div style="display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 20px; background: var(--success); border-radius: 3px;"></div>
-                        <span style="color: var(--text-primary);">Assignment</span>
-                    </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 20px; background: var(--warning); border-radius: 3px;"></div>
-                        <span style="color: var(--text-primary);">Test</span>
+                        <span style="color: var(--text-primary); font-weight: 500;">Items are colored by class</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <div style="width: 20px; height: 20px; background: var(--text-secondary); border-radius: 3px;"></div>
@@ -779,6 +777,13 @@ function setClassColor(classIndex, color) {
     save();
     render();
     renderAllItems();
+
+    // Also update calendar if it's currently visible
+    const calendarView = document.getElementById('calendarView');
+    if (calendarView && calendarView.style.display !== 'none') {
+        renderCalendar();
+    }
+
     closeColorModal();
 }
 
