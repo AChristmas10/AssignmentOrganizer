@@ -884,3 +884,82 @@ function toggleDarkMode() {
         toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     }
 })();
+
+// PWA INSTALLATION
+let deferredPrompt;
+
+// Register service worker
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(registration => {
+                console.log('Service Worker registered successfully:', registration.scope);
+            })
+            .catch(error => {
+                console.log('Service Worker registration failed:', error);
+            });
+    });
+}
+
+// Listen for beforeinstallprompt event
+window.addEventListener('beforeinstallprompt', (e) => {
+    // Prevent the mini-infobar from appearing on mobile
+    e.preventDefault();
+    // Stash the event so it can be triggered later
+    deferredPrompt = e;
+
+    // Show custom install prompt after a delay (don't be too pushy)
+    setTimeout(() => {
+        const installPrompt = document.getElementById('installPrompt');
+        const installDismissed = localStorage.getItem('installDismissed');
+
+        // Only show if user hasn't dismissed it before
+        if (!installDismissed && installPrompt) {
+            installPrompt.style.display = 'block';
+        }
+    }, 3000); // Show after 3 seconds
+});
+
+// Handle install button click
+const installButton = document.getElementById('installButton');
+if (installButton) {
+    installButton.addEventListener('click', async () => {
+        if (!deferredPrompt) {
+            return;
+        }
+
+        // Show the install prompt
+        deferredPrompt.prompt();
+
+        // Wait for the user to respond to the prompt
+        const { outcome } = await deferredPrompt.userChoice;
+
+        console.log(`User response to install prompt: ${outcome}`);
+
+        // Hide the prompt
+        document.getElementById('installPrompt').style.display = 'none';
+
+        // Clear the deferredPrompt variable
+        deferredPrompt = null;
+    });
+}
+
+// Handle dismiss button click
+const dismissInstall = document.getElementById('dismissInstall');
+if (dismissInstall) {
+    dismissInstall.addEventListener('click', () => {
+        document.getElementById('installPrompt').style.display = 'none';
+        // Remember that user dismissed it
+        localStorage.setItem('installDismissed', 'true');
+    });
+}
+
+// Detect if app is already installed
+window.addEventListener('appinstalled', () => {
+    console.log('Do2Date was installed');
+    // Hide install prompt if visible
+    const installPrompt = document.getElementById('installPrompt');
+    if (installPrompt) {
+        installPrompt.style.display = 'none';
+    }
+});

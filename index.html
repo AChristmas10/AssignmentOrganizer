@@ -24,6 +24,13 @@
     <!-- Favicon (optional - you can add later) -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Do2Date">
+
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,6 +39,20 @@
     <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
+
+<!-- Install PWA Prompt -->
+<div id="installPrompt" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--bg-primary); padding:16px 24px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:2px solid var(--primary); max-width:90%; width:400px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; gap:16px;">
+        <div>
+            <strong style="display:block; margin-bottom:4px; color:var(--text-primary);">Install Do2Date</strong>
+            <span style="font-size:0.9em; color:var(--text-secondary);">Add to home screen for quick access!</span>
+        </div>
+        <div style="display:flex; gap:8px;">
+            <button id="installButton" style="background:var(--primary); color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:500;">Install</button>
+            <button id="dismissInstall" style="background:var(--bg-tertiary); color:var(--text-primary); padding:8px 16px; border:none; border-radius:8px; cursor:pointer;">Later</button>
+        </div>
+    </div>
+</div>
 
 <div class="header-container">
     <h1>📚 Do2Date</h1>
@@ -61,6 +82,6 @@
     <div id="calendarContainer"></div>
 </div>
 
-<script src="script.js?v=12"></script>
+<script src="script.js?v=13"></script>
 </body>
 </html>
