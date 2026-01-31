@@ -387,6 +387,15 @@ button:active {
     margin-bottom: 24px;
 }
 
+.calendar-legend {
+    margin-top: 20px;
+    padding: 16px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+
 .calendar-day-header {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;

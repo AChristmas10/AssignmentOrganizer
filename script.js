@@ -141,8 +141,30 @@ function cancelAddAssignment(classIndex) {
 
 // UPDATE ASSIGNMENT PROGRESS
 function updateAssignmentProgress(classIndex, assignmentIndex, value){
+    const oldProgress = classes[classIndex].assignments[assignmentIndex].progress;
     classes[classIndex].assignments[assignmentIndex].progress = Number(value);
-    render(); save();
+
+    // Update the display value immediately using event.target
+    if (event && event.target) {
+        const slider = event.target;
+        const parentDiv = slider.parentElement;
+        const spans = parentDiv.querySelectorAll('span');
+        const displaySpan = spans[spans.length - 1]; // Get the last span (the "X/10" one)
+        if (displaySpan) {
+            displaySpan.textContent = `${value}/10`;
+        }
+    }
+
+    // Check if completion status changed (crossed the 10 threshold)
+    const wasCompleted = oldProgress === 10;
+    const isCompleted = Number(value) === 10;
+
+    // Only re-render if completion status changed
+    if (wasCompleted !== isCompleted) {
+        render();
+    }
+
+    save();
 }
 
 // REMOVE ASSIGNMENT
@@ -195,8 +217,30 @@ function cancelAddTest(classIndex) {
 
 // UPDATE TEST PREPARED
 function updateTestPrepared(classIndex, testIndex, value){
+    const oldPrepared = classes[classIndex].tests[testIndex].prepared;
     classes[classIndex].tests[testIndex].prepared = Number(value);
-    render(); save();
+
+    // Update the display value immediately using event.target
+    if (event && event.target) {
+        const slider = event.target;
+        const parentDiv = slider.parentElement;
+        const spans = parentDiv.querySelectorAll('span');
+        const displaySpan = spans[spans.length - 1]; // Get the last span (the "X/10" one)
+        if (displaySpan) {
+            displaySpan.textContent = `${value}/10`;
+        }
+    }
+
+    // Check if completion status changed (crossed the 10 threshold)
+    const wasCompleted = oldPrepared === 10;
+    const isCompleted = Number(value) === 10;
+
+    // Only re-render if completion status changed
+    if (wasCompleted !== isCompleted) {
+        render();
+    }
+
+    save();
 }
 
 // REMOVE TEST
@@ -603,19 +647,19 @@ function renderCalendar() {
     calendarHTML += `
             </div>
             
-            <div style="margin-top: 20px; padding: 15px; background: #f9f9f9; border-radius: 8px;">
-                <div style="display: flex; gap: 20px; justify-content: center; align-items: center;">
+            <div class="calendar-legend">
+                <div style="display: flex; gap: 20px; justify-content: center; align-items: center; flex-wrap: wrap;">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 20px; background: #4CAF50; border-radius: 3px;"></div>
-                        <span>Assignment</span>
+                        <div style="width: 20px; height: 20px; background: var(--success); border-radius: 3px;"></div>
+                        <span style="color: var(--text-primary);">Assignment</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 20px; background: #e67e22; border-radius: 3px;"></div>
-                        <span>Test</span>
+                        <div style="width: 20px; height: 20px; background: var(--warning); border-radius: 3px;"></div>
+                        <span style="color: var(--text-primary);">Test</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <div style="width: 20px; height: 20px; background: #ddd; border-radius: 3px;"></div>
-                        <span>Completed</span>
+                        <div style="width: 20px; height: 20px; background: var(--text-secondary); border-radius: 3px;"></div>
+                        <span style="color: var(--text-primary);">Completed</span>
                     </div>
                 </div>
             </div>
