@@ -4,6 +4,12 @@ let classes = JSON.parse(localStorage.getItem("classes")) || [];
 
 // Migrate old data: convert 'readiness' to 'prepared' if needed
 classes.forEach(cls => {
+    // Add default color if missing
+    if (!cls.color) {
+        const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
+        cls.color = colors[Math.floor(Math.random() * colors.length)];
+    }
+
     if (cls.tests) {
         cls.tests.forEach(test => {
             if (test.readiness !== undefined && test.prepared === undefined) {
@@ -74,7 +80,12 @@ function formatTime(timeStr) {
 addClassBtn.addEventListener("click", ()=> {
     let name = classInput.value.trim().slice(0,25);
     if (!name) return;
-    classes.push({ name, assignments: [], tests: [], isOpen: false });
+
+    // Generate a random color for the class
+    const colors = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f59e0b', '#10b981', '#06b6d4', '#3b82f6'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+    classes.push({ name, assignments: [], tests: [], isOpen: false, color: randomColor });
     classInput.value = "";
     render();
     save();
@@ -321,7 +332,9 @@ function render() {
         <div class="class-header" onclick="toggleClass(${classIndex})" style="display:flex; justify-content:space-between; align-items:center;">
             <div style="display:flex; align-items:center;">
                 <span id="toggle-icon-${classIndex}" style="margin-right:8px;">${cls.isOpen ? '▼' : '▶'}</span>
+                <div style="width:8px; height:8px; border-radius:50%; background:${cls.color}; margin-right:10px;"></div>
                 <h2 title="${cls.name}" style="margin:0;">${displayClassName}</h2>
+                <button onclick="event.stopPropagation(); changeClassColor(${classIndex})" style="margin-left:12px; padding:4px 10px; font-size:0.8em; background:var(--bg-tertiary); color:var(--text-secondary);" title="Change color">🎨</button>
             </div>
             <span class="assignment-count">${uncompletedCount} assignments</span>
         </div>
@@ -485,6 +498,7 @@ function renderAllItems() {
                 time: assignment.time,
                 progress: assignment.progress,
                 className: cls.name,
+                classColor: cls.color,
                 classIndex: classIndex,
                 itemIndex: assignmentIndex
             });
@@ -497,6 +511,7 @@ function renderAllItems() {
                 date: test.date,
                 prepared: test.prepared,
                 className: cls.name,
+                classColor: cls.color,
                 classIndex: classIndex,
                 itemIndex: testIndex
             });
@@ -551,7 +566,8 @@ function renderAllItems() {
                         <div style="flex: 1;">
                             <div style="display:flex; align-items:center; gap: 8px; flex-wrap: wrap;">
                                 <strong title="${item.name}">${displayName}</strong>
-                                <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 12px; font-size: 0.8em; color: var(--text-secondary);">
+                                <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 12px; font-size: 0.8em; color: var(--text-secondary); display:flex; align-items:center; gap:6px;">
+                                    <div style="width:6px; height:6px; border-radius:50%; background:${item.classColor};"></div>
                                     ${item.className}
                                 </span>
                             </div>
@@ -721,6 +737,54 @@ function changeMonth(delta) {
     const date = window.currentCalendarDate;
     date.setMonth(date.getMonth() + delta);
     renderCalendar();
+}
+
+// CHANGE CLASS COLOR
+function changeClassColor(classIndex) {
+    const colors = [
+        { name: 'Indigo', value: '#6366f1' },
+        { name: 'Purple', value: '#8b5cf6' },
+        { name: 'Pink', value: '#ec4899' },
+        { name: 'Red', value: '#f43f5e' },
+        { name: 'Orange', value: '#f59e0b' },
+        { name: 'Green', value: '#10b981' },
+        { name: 'Cyan', value: '#06b6d4' },
+        { name: 'Blue', value: '#3b82f6' }
+    ];
+
+    const colorOptions = colors.map(c => `
+        <div onclick="setClassColor(${classIndex}, '${c.value}')" 
+             style="display:flex; align-items:center; gap:10px; padding:10px; cursor:pointer; border-radius:8px; transition:background 0.2s;"
+             onmouseover="this.style.background='var(--bg-tertiary)'" 
+             onmouseout="this.style.background='transparent'">
+            <div style="width:24px; height:24px; border-radius:50%; background:${c.value};"></div>
+            <span style="color:var(--text-primary);">${c.name}</span>
+        </div>
+    `).join('');
+
+    const modalHTML = `
+        <div id="colorModal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;" onclick="if(event.target.id==='colorModal') closeColorModal()">
+            <div style="background:var(--bg-primary); padding:24px; border-radius:12px; max-width:300px; width:90%; box-shadow:var(--shadow-lg);">
+                <h3 style="margin-bottom:16px; color:var(--text-primary);">Choose Class Color</h3>
+                ${colorOptions}
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function setClassColor(classIndex, color) {
+    classes[classIndex].color = color;
+    save();
+    render();
+    renderAllItems();
+    closeColorModal();
+}
+
+function closeColorModal() {
+    const modal = document.getElementById('colorModal');
+    if (modal) modal.remove();
 }
 
 // EDIT ITEM FUNCTION
