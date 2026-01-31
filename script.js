@@ -551,11 +551,11 @@ function renderAllItems() {
                         <div style="flex: 1;">
                             <div style="display:flex; align-items:center; gap: 8px; flex-wrap: wrap;">
                                 <strong title="${item.name}">${displayName}</strong>
-                                <span style="background: #e0e0e0; padding: 2px 8px; border-radius: 12px; font-size: 0.8em;">
+                                <span style="background: var(--bg-tertiary); padding: 2px 8px; border-radius: 12px; font-size: 0.8em; color: var(--text-secondary);">
                                     ${item.className}
                                 </span>
                             </div>
-                            <span style="font-size:0.85em; color:#555; margin-top: 4px; display: block;">
+                            <span style="font-size:0.85em; color:var(--text-secondary); margin-top: 4px; display: block;">
                                 ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''} (${dueInText(item.date)})
                             </span>
                         </div>
