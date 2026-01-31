@@ -141,26 +141,26 @@ function cancelAddAssignment(classIndex) {
 
 // UPDATE ASSIGNMENT PROGRESS
 function updateAssignmentProgress(classIndex, assignmentIndex, value){
+    const oldProgress = classes[classIndex].assignments[assignmentIndex].progress;
     classes[classIndex].assignments[assignmentIndex].progress = Number(value);
 
-    // Update the display value immediately (find the sibling span)
-    const slider = event.target;
-    const parentDiv = slider.parentElement;
-    const displaySpan = parentDiv.querySelector('span:last-of-type');
-    if (displaySpan) {
-        displaySpan.textContent = `${value}/10`;
+    // Update the display value immediately using event.target
+    if (event && event.target) {
+        const slider = event.target;
+        const parentDiv = slider.parentElement;
+        const spans = parentDiv.querySelectorAll('span');
+        const displaySpan = spans[spans.length - 1]; // Get the last span (the "X/10" one)
+        if (displaySpan) {
+            displaySpan.textContent = `${value}/10`;
+        }
     }
 
-    // Check if we need to show/hide the completed label
-    const assignmentDiv = slider.closest('.assignment');
-    const completedLabel = assignmentDiv.querySelector('.completed-label');
+    // Check if completion status changed (crossed the 10 threshold)
+    const wasCompleted = oldProgress === 10;
     const isCompleted = Number(value) === 10;
 
-    if (isCompleted && !completedLabel) {
-        // Need to add completed label - re-render
-        render();
-    } else if (!isCompleted && completedLabel) {
-        // Need to remove completed label - re-render
+    // Only re-render if completion status changed
+    if (wasCompleted !== isCompleted) {
         render();
     }
 
@@ -217,26 +217,26 @@ function cancelAddTest(classIndex) {
 
 // UPDATE TEST PREPARED
 function updateTestPrepared(classIndex, testIndex, value){
+    const oldPrepared = classes[classIndex].tests[testIndex].prepared;
     classes[classIndex].tests[testIndex].prepared = Number(value);
 
-    // Update the display value immediately (find the sibling span)
-    const slider = event.target;
-    const parentDiv = slider.parentElement;
-    const displaySpan = parentDiv.querySelector('span:last-of-type');
-    if (displaySpan) {
-        displaySpan.textContent = `${value}/10`;
+    // Update the display value immediately using event.target
+    if (event && event.target) {
+        const slider = event.target;
+        const parentDiv = slider.parentElement;
+        const spans = parentDiv.querySelectorAll('span');
+        const displaySpan = spans[spans.length - 1]; // Get the last span (the "X/10" one)
+        if (displaySpan) {
+            displaySpan.textContent = `${value}/10`;
+        }
     }
 
-    // Check if we need to show/hide the ready label
-    const testDiv = slider.closest('.test');
-    const completedLabel = testDiv.querySelector('.completed-label');
+    // Check if completion status changed (crossed the 10 threshold)
+    const wasCompleted = oldPrepared === 10;
     const isCompleted = Number(value) === 10;
 
-    if (isCompleted && !completedLabel) {
-        // Need to add ready label - re-render
-        render();
-    } else if (!isCompleted && completedLabel) {
-        // Need to remove ready label - re-render
+    // Only re-render if completion status changed
+    if (wasCompleted !== isCompleted) {
         render();
     }
 
