@@ -359,7 +359,8 @@ function render() {
                     ${a.progress}/10
                 </div>
                 ${completed ? `<div class="completed-label">✔ Completed</div>` : ''}
-                <div style="margin-top:6px;">
+                <div style="margin-top:6px; display:flex; gap:8px;">
+                    <button onclick="editItem(${classIndex}, ${a.originalIndex}, 'assignment')">Edit</button>
                     <button onclick="removeAssignment(${classIndex},${a.originalIndex})">Remove</button>
                 </div>
             </div>
@@ -388,7 +389,8 @@ function render() {
                     ${t.prepared}/10
                 </div>
                 ${ready ? `<div class="completed-label">✔ Ready</div>` : ''}
-                <div style="margin-top:6px;">
+                <div style="margin-top:6px; display:flex; gap:8px;">
+                    <button onclick="editItem(${classIndex}, ${t.originalIndex}, 'test')">Edit</button>
                     <button onclick="removeTest(${classIndex},${t.originalIndex})">Remove</button>
                 </div>
             </div>
@@ -539,11 +541,15 @@ function renderAllItems() {
                     <div style="display:flex; align-items:center; gap: 10px;">
                         <span style="min-width: 80px;">${isAssignment ? 'Progress:' : 'Prepared:'}</span>
                         <input type="range" min="0" max="10" value="${isAssignment ? item.progress : item.prepared}" 
-                               oninput="${isAssignment ? 'updateAssignmentProgress' : 'updateTestPrepared'}(${item.classIndex},${item.itemIndex},this.value); renderAllItems();"
+                               oninput="${isAssignment ? 'updateAssignmentProgress' : 'updateTestPrepared'}(${item.classIndex},${item.itemIndex},this.value);"
                                style="flex: 1;">
                         <span style="min-width: 40px;">${isAssignment ? item.progress : item.prepared}/10</span>
                     </div>
                     ${completed ? `<div class="completed-label">✔ ${isAssignment ? 'Completed' : 'Ready'}</div>` : ''}
+                    <div style="margin-top:8px; display:flex; gap:8px;">
+                        <button onclick="editItem(${item.classIndex}, ${item.itemIndex}, '${item.type}')" style="font-size:0.85em; padding:6px 12px;">Edit</button>
+                        <button onclick="${isAssignment ? 'removeAssignment' : 'removeTest'}(${item.classIndex},${item.itemIndex}); renderAllItems();" style="font-size:0.85em; padding:6px 12px; background:#ef4444;">Remove</button>
+                    </div>
                 </div>
                 `;
     }).join('')}
@@ -693,6 +699,74 @@ function changeMonth(delta) {
     const date = window.currentCalendarDate;
     date.setMonth(date.getMonth() + delta);
     renderCalendar();
+}
+
+// EDIT ITEM FUNCTION
+function editItem(classIndex, itemIndex, type) {
+    const item = type === 'assignment' ? classes[classIndex].assignments[itemIndex] : classes[classIndex].tests[itemIndex];
+
+    // Create modal for editing
+    const modalHTML = `
+        <div id="editModal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); display:flex; align-items:center; justify-content:center; z-index:1000;">
+            <div style="background:var(--bg-primary); padding:24px; border-radius:12px; max-width:500px; width:90%; box-shadow:var(--shadow-lg);">
+                <h3 style="margin-bottom:16px; color:var(--text-primary);">Edit ${type === 'assignment' ? 'Assignment' : 'Test'}</h3>
+                
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:4px; color:var(--text-primary);">Name:</label>
+                    <input id="edit-name" type="text" value="${item.name}" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-primary); color:var(--text-primary);">
+                </div>
+                
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; margin-bottom:4px; color:var(--text-primary);">Date:</label>
+                    <input id="edit-date" type="date" value="${type === 'assignment' ? item.due : item.date}" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-primary); color:var(--text-primary);">
+                </div>
+                
+                ${type === 'assignment' ? `
+                <div style="margin-bottom:16px;">
+                    <label style="display:block; margin-bottom:4px; color:var(--text-primary);">Time:</label>
+                    <input id="edit-time" type="time" value="${item.time || '23:59'}" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-primary); color:var(--text-primary);">
+                </div>
+                ` : ''}
+                
+                <div style="display:flex; gap:8px; justify-content:flex-end;">
+                    <button onclick="closeEditModal()" style="background:var(--bg-tertiary); color:var(--text-primary);">Cancel</button>
+                    <button onclick="saveEdit(${classIndex}, ${itemIndex}, '${type}')">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+}
+
+function closeEditModal() {
+    const modal = document.getElementById('editModal');
+    if (modal) modal.remove();
+}
+
+function saveEdit(classIndex, itemIndex, type) {
+    const newName = document.getElementById('edit-name').value.trim().slice(0, 30);
+    const newDate = document.getElementById('edit-date').value;
+
+    if (!newName || !newDate) {
+        alert('Please fill in all fields');
+        return;
+    }
+
+    if (type === 'assignment') {
+        const newTime = document.getElementById('edit-time').value || '23:59';
+        classes[classIndex].assignments[itemIndex].name = newName;
+        classes[classIndex].assignments[itemIndex].due = newDate;
+        classes[classIndex].assignments[itemIndex].time = newTime;
+    } else {
+        classes[classIndex].tests[itemIndex].name = newName;
+        classes[classIndex].tests[itemIndex].date = newDate;
+    }
+
+    save();
+    render();
+    renderAllItems();
+    closeEditModal();
 }
 
 // DARK MODE TOGGLE
