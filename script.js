@@ -144,14 +144,24 @@ function updateAssignmentProgress(classIndex, assignmentIndex, value){
     const oldProgress = classes[classIndex].assignments[assignmentIndex].progress;
     classes[classIndex].assignments[assignmentIndex].progress = Number(value);
 
-    // Update the display value immediately using event.target
+    // Update the display value immediately - find the exact element
     if (event && event.target) {
         const slider = event.target;
+        // The structure is: <div>Progress: <input> X/10</div>
+        // So the next sibling text node after the slider contains "X/10"
         const parentDiv = slider.parentElement;
-        const spans = parentDiv.querySelectorAll('span');
-        const displaySpan = spans[spans.length - 1]; // Get the last span (the "X/10" one)
-        if (displaySpan) {
-            displaySpan.textContent = `${value}/10`;
+        const textNodes = Array.from(parentDiv.childNodes);
+
+        // Find the text node that comes after the input
+        for (let i = 0; i < textNodes.length; i++) {
+            if (textNodes[i] === slider && i < textNodes.length - 1) {
+                // The next node should be the text with "X/10"
+                const nextNode = textNodes[i + 1];
+                if (nextNode.nodeType === Node.TEXT_NODE) {
+                    nextNode.textContent = ` ${value}/10`;
+                    break;
+                }
+            }
         }
     }
 
@@ -220,14 +230,24 @@ function updateTestPrepared(classIndex, testIndex, value){
     const oldPrepared = classes[classIndex].tests[testIndex].prepared;
     classes[classIndex].tests[testIndex].prepared = Number(value);
 
-    // Update the display value immediately using event.target
+    // Update the display value immediately - find the exact element
     if (event && event.target) {
         const slider = event.target;
+        // The structure is: <div>Prepared: <input> X/10</div>
+        // So the next sibling text node after the slider contains "X/10"
         const parentDiv = slider.parentElement;
-        const spans = parentDiv.querySelectorAll('span');
-        const displaySpan = spans[spans.length - 1]; // Get the last span (the "X/10" one)
-        if (displaySpan) {
-            displaySpan.textContent = `${value}/10`;
+        const textNodes = Array.from(parentDiv.childNodes);
+
+        // Find the text node that comes after the input
+        for (let i = 0; i < textNodes.length; i++) {
+            if (textNodes[i] === slider && i < textNodes.length - 1) {
+                // The next node should be the text with "X/10"
+                const nextNode = textNodes[i + 1];
+                if (nextNode.nodeType === Node.TEXT_NODE) {
+                    nextNode.textContent = ` ${value}/10`;
+                    break;
+                }
+            }
         }
     }
 
