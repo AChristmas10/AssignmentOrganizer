@@ -1,267 +1,554 @@
+/* ---------- CSS VARIABLES & THEMES ---------- */
+:root {
+    --primary: #6366f1;
+    --primary-dark: #4f46e5;
+    --secondary: #8b5cf6;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --bg-primary: #ffffff;
+    --bg-secondary: #f9fafb;
+    --bg-tertiary: #f3f4f6;
+    --text-primary: #111827;
+    --text-secondary: #6b7280;
+    --border: #e5e7eb;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+}
+
+[data-theme="dark"] {
+    --primary: #818cf8;
+    --primary-dark: #6366f1;
+    --secondary: #a78bfa;
+    --success: #34d399;
+    --warning: #fbbf24;
+    --danger: #f87171;
+    --bg-primary: #1f2937;
+    --bg-secondary: #111827;
+    --bg-tertiary: #374151;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border: #374151;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.3);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -2px rgba(0, 0, 0, 0.4);
+}
+
 /* ---------- GENERAL ---------- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
-    font-family: Arial, sans-serif;
-    background: #f2f2f2;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
     padding: 20px;
+    max-width: 1400px;
+    margin: 0 auto;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    line-height: 1.6;
+}
+
+/* ---------- HEADER ---------- */
+.header-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    padding: 20px 0;
 }
 
 h1 {
-    margin-bottom: 10px;
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dark-mode-toggle {
+    background: var(--bg-primary);
+    border: 2px solid var(--border);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.dark-mode-toggle:hover {
+    transform: scale(1.1);
+    box-shadow: var(--shadow-md);
 }
 
 /* ---------- TABS ---------- */
 .tabs {
     display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #ddd;
-    padding-bottom: 10px;
+    gap: 12px;
+    margin-bottom: 30px;
+    padding: 8px;
+    background: var(--bg-primary);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    flex-wrap: wrap;
 }
 
 .tab-button {
-    padding: 10px 20px;
+    padding: 12px 24px;
     border: none;
-    background: #e0e0e0;
+    background: transparent;
     cursor: pointer;
-    border-radius: 5px 5px 0 0;
-    font-size: 1em;
-    transition: background 0.3s;
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    flex: 1;
+    min-width: 120px;
 }
 
 .tab-button:hover {
-    background: #d0d0d0;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
 }
 
 .tab-button.active {
-    background: #4CAF50;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     color: white;
-    font-weight: bold;
+    box-shadow: var(--shadow-md);
 }
 
 /* ---------- ADD CLASS ---------- */
 .add-class {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .add-class input {
-    padding: 6px;
-    margin-right: 5px;
+    flex: 1;
+    min-width: 200px;
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.95rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+}
+
+.add-class input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
 .add-class button {
-    padding: 6px 10px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-weight: 600;
     cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-sm);
+}
+
+.add-class button:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
 }
 
 /* ---------- CLASS CARD ---------- */
 .class-card {
-    background: white;
-    padding: 15px;
-    margin-bottom: 15px;
-    border-radius: 8px;
+    background: var(--bg-primary);
+    padding: 20px;
+    margin-bottom: 20px;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    transition: all 0.3s ease;
+    border: 1px solid var(--border);
 }
 
-/* Class header with toggle arrow and remove button */
+.class-card:hover {
+    box-shadow: var(--shadow-lg);
+}
+
 .class-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     cursor: pointer;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    transition: background 0.2s ease;
+}
+
+.class-header:hover {
+    background: var(--bg-secondary);
 }
 
 .class-header h2 {
     margin: 0;
     flex: 1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--text-primary);
 }
 
 .class-header .assignment-count {
-    width: 120px;
-    text-align: right;
-    font-size: 0.9em;
-    color: #555;
-    margin-right: 5px;
-}
-
-/* Remove class button under the toggle arrow */
-.remove-class-btn-container {
-    margin-top: 6px;
-    display: flex;
-    justify-content: flex-end;
-}
-
-.remove-class-btn-container button {
-    background: #ddd;
-    color: #333;
-    border: none;
-    padding: 4px 8px;
-    border-radius: 4px;
-    cursor: pointer;
+    padding: 6px 14px;
+    background: var(--bg-tertiary);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    font-weight: 500;
 }
 
 /* ---------- ASSIGNMENTS & TESTS ---------- */
 .assignment, .test {
-    padding: 8px;
-    margin-bottom: 6px;
-    border-radius: 4px;
-    background: #fff;
-    border-left: 4px solid #4CAF50; /* default green for assignments */
+    padding: 16px;
+    margin-bottom: 12px;
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    border-left: 4px solid var(--success);
+    transition: all 0.2s ease;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.assignment:hover, .test:hover {
+    transform: translateX(4px);
+    box-shadow: var(--shadow-md);
 }
 
 .test {
-    border-left-color: #e67e22; /* subtle orange for tests */
-    background: #fafafa; /* slightly different bg for tests */
+    border-left-color: var(--warning);
+}
+
+.assignment.completed, .test.completed {
+    opacity: 0.7;
+    border-left-color: var(--text-secondary);
 }
 
 .completed-label {
-    margin-top: 6px;
-    font-size: 0.9em;
-    font-weight: bold;
-    color: #2ecc71;
+    margin-top: 8px;
+    padding: 4px 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--success);
+    background: rgba(16, 185, 129, 0.1);
+    border-radius: var(--radius-sm);
+    display: inline-block;
 }
 
-/* ---------- ADD ASSIGNMENT + ADD TEST AREA ---------- */
-.add-assignment-test {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-    margin-bottom: 10px;
+/* ---------- INPUT FIELDS ---------- */
+input[type="text"],
+input[type="date"],
+input[type="time"],
+input[type="number"] {
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+    font-family: inherit;
 }
 
-.add-assignment-test > div {
-    display: flex;
-    gap: 4px;
-    align-items: center;
+input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
 }
 
-.add-assignment-test input[type="number"] {
-    width: 60px;
+input[type="range"] {
+    flex: 1;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--bg-tertiary);
+    outline: none;
+    -webkit-appearance: none;
 }
 
-/* ---------- TOGGLE CONTAINER ---------- */
-#items-container {
-    margin-top: 10px;
-}
-
-/* ---------- FILTER TABS (in All Items view) ---------- */
-.filter-tabs {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #e0e0e0;
-}
-
-.filter-tab {
-    padding: 8px 16px;
-    border: 1px solid #ddd;
-    background: #f5f5f5;
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     cursor: pointer;
-    border-radius: 4px;
-    font-size: 0.9em;
-    transition: all 0.2s;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.2s ease;
 }
 
-.filter-tab:hover {
-    background: #e8e8e8;
+input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+    box-shadow: var(--shadow-md);
 }
 
-.filter-tab.active {
-    background: #2196F3;
-    color: white;
-    border-color: #2196F3;
-    font-weight: 500;
+input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+    cursor: pointer;
+    border: none;
+    box-shadow: var(--shadow-sm);
 }
 
 /* ---------- BUTTONS ---------- */
 button {
     cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 10px 18px;
+    border: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    background: var(--primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
 }
 
 button:hover {
-    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+/* ---------- FILTER TABS ---------- */
+.filter-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    padding: 6px;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    flex-wrap: wrap;
+}
+
+.filter-tab {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    transition: all 0.2s ease;
+    flex: 1;
+}
+
+.filter-tab:hover {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+.filter-tab.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: var(--shadow-sm);
 }
 
 /* ---------- CALENDAR ---------- */
 .calendar-grid {
     display: grid;
     grid-template-columns: repeat(7, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 24px;
 }
 
 .calendar-day-header {
-    background: #4CAF50;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
     color: white;
-    padding: 10px;
+    padding: 12px;
     text-align: center;
-    font-weight: bold;
-    border-radius: 4px;
+    font-weight: 600;
+    border-radius: var(--radius-md);
+    font-size: 0.9rem;
 }
 
 .calendar-day {
-    background: white;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    min-height: 100px;
-    padding: 8px;
+    background: var(--bg-primary);
+    border: 2px solid var(--border);
+    border-radius: var(--radius-md);
+    min-height: 120px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
+    transition: all 0.2s ease;
+}
+
+.calendar-day:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow-md);
 }
 
 .calendar-day.empty {
-    background: #f9f9f9;
-    border: 1px solid #eee;
+    background: var(--bg-tertiary);
+    opacity: 0.4;
 }
 
 .calendar-day.today {
-    border: 2px solid #2196F3;
-    background: #e3f2fd;
+    border: 3px solid var(--primary);
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(139, 92, 246, 0.05) 100%);
+    box-shadow: var(--shadow-md);
 }
 
 .day-number {
-    font-weight: bold;
-    font-size: 1.1em;
-    margin-bottom: 5px;
-    color: #333;
+    font-weight: 700;
+    font-size: 1.1rem;
+    margin-bottom: 8px;
+    color: var(--text-primary);
 }
 
 .day-items {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
 }
 
 .calendar-item {
-    padding: 4px 6px;
-    border-radius: 3px;
-    font-size: 0.75em;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: all 0.2s ease;
+    font-weight: 500;
 }
 
 .calendar-item:hover {
-    opacity: 0.8;
+    transform: translateX(2px);
+    box-shadow: var(--shadow-sm);
 }
 
 .calendar-item.assignment {
-    background: #4CAF50;
+    background: var(--success);
     color: white;
 }
 
 .calendar-item.test {
-    background: #e67e22;
+    background: var(--warning);
     color: white;
 }
 
 .calendar-item.completed {
-    background: #ddd;
-    color: #666;
+    background: var(--bg-tertiary);
+    color: var(--text-secondary);
     text-decoration: line-through;
 }
 
-.item-name {
-    font-weight: 500;
+/* ---------- MOBILE RESPONSIVE ---------- */
+@media (max-width: 768px) {
+    body {
+        padding: 12px;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .header-container {
+        margin-bottom: 16px;
+    }
+
+    .tabs {
+        padding: 6px;
+        gap: 8px;
+    }
+
+    .tab-button {
+        padding: 10px 16px;
+        font-size: 0.85rem;
+        min-width: 100px;
+    }
+
+    .class-card {
+        padding: 16px;
+    }
+
+    .class-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .calendar-grid {
+        gap: 8px;
+    }
+
+    .calendar-day {
+        min-height: 100px;
+        padding: 8px;
+    }
+
+    .day-number {
+        font-size: 1rem;
+    }
+
+    .calendar-item {
+        font-size: 0.7rem;
+        padding: 4px 6px;
+    }
+}
+
+@media (max-width: 480px) {
+    .add-class {
+        flex-direction: column;
+    }
+
+    .add-class input,
+    .add-class button {
+        width: 100%;
+    }
+
+    .calendar-day-header {
+        font-size: 0.75rem;
+        padding: 8px;
+    }
+
+    .calendar-day {
+        min-height: 80px;
+    }
+}
+
+/* ---------- ANIMATIONS ---------- */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.class-card {
+    animation: fadeIn 0.4s ease;
 }

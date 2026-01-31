@@ -630,3 +630,28 @@ function changeMonth(delta) {
     date.setMonth(date.getMonth() + delta);
     renderCalendar();
 }
+
+// DARK MODE TOGGLE
+function toggleDarkMode() {
+    const html = document.documentElement;
+    const currentTheme = html.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    const toggleBtn = document.getElementById('darkModeToggle');
+
+    html.setAttribute('data-theme', newTheme);
+    localStorage.setItem('theme', newTheme);
+
+    // Update button icon
+    toggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+}
+
+// Initialize theme on page load
+(function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    const toggleBtn = document.getElementById('darkModeToggle');
+
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    if (toggleBtn) {
+        toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    }
+})();

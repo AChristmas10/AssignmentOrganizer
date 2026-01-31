@@ -24,11 +24,19 @@
     <!-- Favicon (optional - you can add later) -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
 
-    <link rel="stylesheet" href="style.css?v=1">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
-<h1>📚 Assignment Organizer</h1>
+<div class="header-container">
+    <h1>📚 Do2Date</h1>
+    <button id="darkModeToggle" class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
+</div>
 
 <div class="tabs">
     <button id="classesTab" class="tab-button active" onclick="switchView('classes')">My Classes</button>
@@ -53,6 +61,6 @@
     <div id="calendarContainer"></div>
 </div>
 
-<script src="script.js?v=1"></script>
+<script src="script.js?v=2"></script>
 </body>
 </html>
