@@ -860,6 +860,230 @@ function saveEdit(classIndex, itemIndex, type) {
     closeEditModal();
 }
 
+// EXPORT FUNCTIONS
+function showExportMenu() {
+    const menuHTML = `
+        <div id="exportMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:16px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:200px;" onclick="event.stopPropagation()">
+            <h3 style="margin:0 0 12px 0; color:var(--text-primary); font-size:1em;">Export Data</h3>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <button onclick="exportToGoogleCalendar()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <span>📅</span> Google Calendar
+                </button>
+                <button onclick="exportToCSV()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <span>📊</span> Download CSV
+                </button>
+                <button onclick="exportToICS()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <span>📆</span> Download ICS
+                </button>
+                <button onclick="printSchedule()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                    <span>🖨️</span> Print/PDF
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', menuHTML);
+
+    // Close menu when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', closeExportMenu);
+    }, 100);
+}
+
+function closeExportMenu() {
+    const menu = document.getElementById('exportMenu');
+    if (menu) {
+        menu.remove();
+        document.removeEventListener('click', closeExportMenu);
+    }
+}
+
+// Export to Google Calendar
+function exportToGoogleCalendar() {
+    let calendarURL = 'https://calendar.google.com/calendar/r/eventedit?';
+    let allItems = [];
+
+    classes.forEach(cls => {
+        cls.assignments.forEach(assignment => {
+            allItems.push({
+                title: `${assignment.name} (${cls.name})`,
+                date: assignment.due,
+                time: assignment.time || '23:59',
+                type: 'assignment'
+            });
+        });
+
+        cls.tests.forEach(test => {
+            allItems.push({
+                title: `TEST: ${test.name} (${cls.name})`,
+                date: test.date,
+                time: '09:00',
+                type: 'test'
+            });
+        });
+    });
+
+    if (allItems.length === 0) {
+        alert('No assignments or tests to export!');
+        closeExportMenu();
+        return;
+    }
+
+    // For multiple events, we'll create ICS and let them import
+    alert(`Opening Google Calendar...\n\nTo add multiple events:\n1. Download the ICS file\n2. Go to Google Calendar\n3. Click Settings → Import & Export\n4. Upload the ICS file`);
+
+    // Open Google Calendar import page
+    window.open('https://calendar.google.com/calendar/u/0/r/settings/export', '_blank');
+
+    // Also trigger ICS download
+    setTimeout(() => exportToICS(), 500);
+
+    closeExportMenu();
+}
+
+// Export to CSV
+function exportToCSV() {
+    let csv = 'Type,Name,Class,Due Date,Time,Progress/Prepared,Completed\n';
+
+    classes.forEach(cls => {
+        cls.assignments.forEach(assignment => {
+            const dueDateTime = assignment.time ? `${assignment.due} ${assignment.time}` : assignment.due;
+            csv += `Assignment,"${assignment.name}","${cls.name}",${assignment.due},${assignment.time || '23:59'},${assignment.progress}/10,${assignment.progress === 10 ? 'Yes' : 'No'}\n`;
+        });
+
+        cls.tests.forEach(test => {
+            csv += `Test,"${test.name}","${cls.name}",${test.date},,${test.prepared}/10,${test.prepared === 10 ? 'Yes' : 'No'}\n`;
+        });
+    });
+
+    // Create download
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `do2date-export-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    closeExportMenu();
+}
+
+// Export to ICS (iCalendar format - works with Google Calendar, Apple Calendar, Outlook)
+function exportToICS() {
+    let ics = 'BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//Do2Date//Assignment Tracker//EN\nCALSCALE:GREGORIAN\n';
+
+    classes.forEach(cls => {
+        cls.assignments.forEach(assignment => {
+            const dueDate = assignment.due.replace(/-/g, '');
+            const dueTime = (assignment.time || '23:59').replace(':', '') + '00';
+
+            ics += 'BEGIN:VEVENT\n';
+            ics += `UID:${assignment.due}-${assignment.name.replace(/[^a-zA-Z0-9]/g, '')}-${cls.name.replace(/[^a-zA-Z0-9]/g, '')}@do2date.com\n`;
+            ics += `DTSTART:${dueDate}T${dueTime}\n`;
+            ics += `SUMMARY:${assignment.name} - ${cls.name}\n`;
+            ics += `DESCRIPTION:Assignment for ${cls.name}\\nProgress: ${assignment.progress}/10\n`;
+            ics += `CATEGORIES:ASSIGNMENT,${cls.name}\n`;
+            ics += 'END:VEVENT\n';
+        });
+
+        cls.tests.forEach(test => {
+            const testDate = test.date.replace(/-/g, '');
+
+            ics += 'BEGIN:VEVENT\n';
+            ics += `UID:${test.date}-${test.name.replace(/[^a-zA-Z0-9]/g, '')}-${cls.name.replace(/[^a-zA-Z0-9]/g, '')}@do2date.com\n`;
+            ics += `DTSTART:${testDate}T090000\n`;
+            ics += `SUMMARY:TEST: ${test.name} - ${cls.name}\n`;
+            ics += `DESCRIPTION:Test for ${cls.name}\\nPrepared: ${test.prepared}/10\n`;
+            ics += `CATEGORIES:TEST,${cls.name}\n`;
+            ics += 'END:VEVENT\n';
+        });
+    });
+
+    ics += 'END:VCALENDAR';
+
+    // Create download
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `do2date-calendar-${new Date().toISOString().split('T')[0]}.ics`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    closeExportMenu();
+}
+
+// Print/Save as PDF
+function printSchedule() {
+    const printWindow = window.open('', '_blank');
+
+    let html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Do2Date Schedule</title>
+            <style>
+                body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+                h1 { color: #6366f1; }
+                h2 { color: #333; margin-top: 20px; border-bottom: 2px solid #6366f1; padding-bottom: 5px; }
+                .class { margin-bottom: 30px; page-break-inside: avoid; }
+                .item { margin: 10px 0; padding: 10px; border-left: 4px solid #10b981; background: #f9fafb; }
+                .test { border-left-color: #f59e0b; }
+                .completed { opacity: 0.6; text-decoration: line-through; }
+                .date { font-weight: bold; color: #6366f1; }
+                @media print {
+                    body { padding: 10px; }
+                    button { display: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <h1>📚 Do2Date Schedule</h1>
+            <p>Generated: ${new Date().toLocaleDateString()}</p>
+            <button onclick="window.print()" style="padding: 10px 20px; background: #6366f1; color: white; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px;">Print / Save as PDF</button>
+    `;
+
+    classes.forEach(cls => {
+        html += `<div class="class"><h2>${cls.name}</h2>`;
+
+        // Combine and sort items
+        let items = [];
+        cls.assignments.forEach(a => items.push({ ...a, type: 'assignment', date: a.due }));
+        cls.tests.forEach(t => items.push({ ...t, type: 'test' }));
+        items.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        items.forEach(item => {
+            const completed = item.type === 'assignment' ? item.progress === 10 : item.prepared === 10;
+            const progress = item.type === 'assignment' ? `${item.progress}/10` : `${item.prepared}/10`;
+            const timeStr = item.time ? ` at ${formatTime(item.time)}` : '';
+
+            html += `
+                <div class="item ${item.type} ${completed ? 'completed' : ''}">
+                    <strong>${item.name}</strong>
+                    <br>
+                    <span class="date">${formatDate(item.date)}${timeStr}</span>
+                    <br>
+                    ${item.type === 'assignment' ? 'Progress' : 'Prepared'}: ${progress}
+                    ${completed ? ' ✓ Completed' : ''}
+                </div>
+            `;
+        });
+
+        html += '</div>';
+    });
+
+    html += '</body></html>';
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+
+    closeExportMenu();
+}
+
 // TOGGLE NOTIFICATIONS
 async function toggleNotifications() {
     if (!('Notification' in window)) {
