@@ -98,23 +98,88 @@ function removeClass(classIndex) {
     save();
 }
 
+// TOGGLE RECURRING OPTIONS
+function toggleRecurringOptions(classIndex, type) {
+    const prefix = type === 'assignment' ? 'a' : 't';
+    const checkbox = document.getElementById(`${prefix}-recurring-${classIndex}`);
+    const frequency = document.getElementById(`${prefix}-frequency-${classIndex}`);
+    const occurrences = document.getElementById(`${prefix}-occurrences-${classIndex}`);
+    const label = document.getElementById(`${prefix}-recurring-label-${classIndex}`);
+
+    if (checkbox.checked) {
+        frequency.style.display = 'inline-block';
+        occurrences.style.display = 'inline-block';
+        label.style.display = 'inline';
+        updateRecurringLabel(classIndex, type);
+    } else {
+        frequency.style.display = 'none';
+        occurrences.style.display = 'none';
+        label.style.display = 'none';
+    }
+}
+
+function updateRecurringLabel(classIndex, type) {
+    const prefix = type === 'assignment' ? 'a' : 't';
+    const frequency = document.getElementById(`${prefix}-frequency-${classIndex}`).value;
+    const occurrences = document.getElementById(`${prefix}-occurrences-${classIndex}`).value;
+    const label = document.getElementById(`${prefix}-recurring-label-${classIndex}`);
+
+    const freqText = frequency === 'weekly' ? 'week' : '2 weeks';
+    label.textContent = `(creates ${occurrences} ${type}s, every ${freqText})`;
+}
+
 // ADD ASSIGNMENT
 function addAssignment(classIndex){
     const nameInput = document.getElementById(`a-name-${classIndex}`);
     const dueInput = document.getElementById(`a-due-${classIndex}`);
     const timeInput = document.getElementById(`a-time-${classIndex}`);
+    const recurringCheckbox = document.getElementById(`a-recurring-${classIndex}`);
+    const frequencySelect = document.getElementById(`a-frequency-${classIndex}`);
+    const occurrencesInput = document.getElementById(`a-occurrences-${classIndex}`);
+
     if(!nameInput.value || !dueInput.value) return;
+
     const assignmentName = nameInput.value.trim().slice(0,30);
-    const dueTime = timeInput.value || '23:59'; // Default to 11:59 PM
-    classes[classIndex].assignments.push({
-        name: assignmentName,
-        due: dueInput.value,
-        time: dueTime,
-        progress: 0
-    });
+    const dueTime = timeInput.value || '23:59';
+    const isRecurring = recurringCheckbox.checked;
+
+    if (isRecurring) {
+        // Create multiple recurring assignments
+        const frequency = frequencySelect.value;
+        const occurrences = parseInt(occurrencesInput.value);
+        const interval = frequency === 'weekly' ? 7 : 14; // days
+
+        const baseDate = new Date(dueInput.value);
+
+        for (let i = 0; i < occurrences; i++) {
+            const currentDate = new Date(baseDate);
+            currentDate.setDate(currentDate.getDate() + (i * interval));
+
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const assignmentNumber = occurrences > 1 ? ` #${i + 1}` : '';
+
+            classes[classIndex].assignments.push({
+                name: assignmentName + assignmentNumber,
+                due: dateStr,
+                time: dueTime,
+                progress: 0
+            });
+        }
+    } else {
+        // Create single assignment
+        classes[classIndex].assignments.push({
+            name: assignmentName,
+            due: dueInput.value,
+            time: dueTime,
+            progress: 0
+        });
+    }
+
     nameInput.value = '';
     dueInput.value = '';
     timeInput.value = '23:59';
+    recurringCheckbox.checked = false;
+    toggleRecurringOptions(classIndex, 'assignment');
 
     // Hide the form after adding
     document.getElementById(`add-assignment-form-${classIndex}`).style.display = 'none';
@@ -347,15 +412,27 @@ function render() {
             </div>
             
             <!-- Add Assignment Form (hidden by default) -->
-            <div id="add-assignment-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
+            <div id="add-assignment-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:var(--bg-tertiary); border-radius:8px;">
                 <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <input id="a-name-${classIndex}" placeholder="Assignment name" style="flex: 1; min-width: 150px;">
                     <input id="a-due-${classIndex}" type="date" style="width: 140px;">
                     <input id="a-time-${classIndex}" type="time" value="23:59" style="width: 100px;">
                 </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:6px; color:var(--text-primary); font-size:0.9em;">
+                        <input type="checkbox" id="a-recurring-${classIndex}" onchange="toggleRecurringOptions(${classIndex}, 'assignment')">
+                        🔄 Recurring
+                    </label>
+                    <select id="a-frequency-${classIndex}" style="display:none; padding:6px; border-radius:6px; border:2px solid var(--border); background:var(--bg-primary); color:var(--text-primary);" onchange="updateRecurringLabel(${classIndex}, 'assignment')">
+                        <option value="weekly">Weekly</option>
+                        <option value="biweekly">Every 2 weeks</option>
+                    </select>
+                    <input type="number" id="a-occurrences-${classIndex}" min="2" max="20" value="4" placeholder="Times" style="display:none; width:80px; padding:6px; border-radius:6px; border:2px solid var(--border); background:var(--bg-primary); color:var(--text-primary);" title="Number of times to repeat" oninput="updateRecurringLabel(${classIndex}, 'assignment')">
+                    <span id="a-recurring-label-${classIndex}" style="display:none; font-size:0.85em; color:var(--text-secondary);"></span>
+                </div>
                 <div style="display:flex; gap:8px;">
                     <button onclick="addAssignment(${classIndex})">Save Assignment</button>
-                    <button onclick="cancelAddAssignment(${classIndex})" style="background:#ccc;">Cancel</button>
+                    <button onclick="cancelAddAssignment(${classIndex})" style="background:var(--bg-secondary); color:var(--text-primary);">Cancel</button>
                 </div>
             </div>
                 
