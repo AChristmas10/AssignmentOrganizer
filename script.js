@@ -860,6 +860,45 @@ function saveEdit(classIndex, itemIndex, type) {
     closeEditModal();
 }
 
+// TOGGLE NOTIFICATIONS
+async function toggleNotifications() {
+    if (!('Notification' in window)) {
+        alert('Your browser doesn\'t support notifications 😔');
+        return;
+    }
+
+    if (Notification.permission === 'granted') {
+        // Show info that notifications are enabled
+        const disable = confirm('Notifications are currently enabled. \n\nNote: You can disable them in your browser settings.\n\nClick OK to test notifications.');
+        if (disable) {
+            showTestNotification();
+        }
+    } else if (Notification.permission === 'denied') {
+        alert('Notifications are blocked. Please enable them in your browser settings.');
+    } else {
+        // Request permission
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            showTestNotification();
+            scheduleNotificationCheck();
+            updateNotificationIcon();
+        }
+    }
+}
+
+function updateNotificationIcon() {
+    const notifBtn = document.getElementById('notificationToggle');
+    if (notifBtn) {
+        if (Notification.permission === 'granted') {
+            notifBtn.textContent = '🔔';
+            notifBtn.style.opacity = '1';
+        } else {
+            notifBtn.textContent = '🔕';
+            notifBtn.style.opacity = '0.5';
+        }
+    }
+}
+
 // DARK MODE TOGGLE
 function toggleDarkMode() {
     const html = document.documentElement;
@@ -883,6 +922,9 @@ function toggleDarkMode() {
     if (toggleBtn) {
         toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
     }
+
+    // Update notification icon
+    updateNotificationIcon();
 })();
 
 // PWA INSTALLATION
@@ -963,3 +1005,168 @@ window.addEventListener('appinstalled', () => {
         installPrompt.style.display = 'none';
     }
 });
+
+// NOTIFICATIONS SYSTEM
+// Check and request notification permission
+function checkNotificationPermission() {
+    if (!('Notification' in window)) {
+        console.log('This browser does not support notifications');
+        return false;
+    }
+
+    if (Notification.permission === 'granted') {
+        return true;
+    } else if (Notification.permission !== 'denied') {
+        // Ask for permission after a delay (not immediately on page load)
+        setTimeout(() => {
+            const notifDismissed = localStorage.getItem('notificationPromptDismissed');
+            if (!notifDismissed) {
+                showNotificationPrompt();
+            }
+        }, 5000); // Show after 5 seconds
+    }
+
+    return false;
+}
+
+function showNotificationPrompt() {
+    const promptHTML = `
+        <div id="notificationPrompt" style="position:fixed; top:20px; right:20px; background:var(--bg-primary); padding:16px 20px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:2px solid var(--primary); max-width:90%; width:350px; animation: slideIn 0.3s ease;">
+            <div style="margin-bottom:12px;">
+                <strong style="display:block; margin-bottom:4px; color:var(--text-primary); font-size:1em;">🔔 Stay on top of deadlines</strong>
+                <span style="font-size:0.9em; color:var(--text-secondary);">Get notified when assignments are due soon</span>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:flex-end;">
+                <button id="enableNotifications" style="background:var(--primary); color:white; padding:8px 16px; border:none; border-radius:8px; cursor:pointer; font-weight:500;">Enable</button>
+                <button id="dismissNotifications" style="background:var(--bg-tertiary); color:var(--text-primary); padding:8px 16px; border:none; border-radius:8px; cursor:pointer;">Not Now</button>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', promptHTML);
+
+    // Handle enable button
+    document.getElementById('enableNotifications').addEventListener('click', async () => {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            showTestNotification();
+            scheduleNotificationCheck();
+        }
+        document.getElementById('notificationPrompt').remove();
+    });
+
+    // Handle dismiss button
+    document.getElementById('dismissNotifications').addEventListener('click', () => {
+        document.getElementById('notificationPrompt').remove();
+        localStorage.setItem('notificationPromptDismissed', 'true');
+    });
+}
+
+function showTestNotification() {
+    new Notification('🎉 Notifications enabled!', {
+        body: 'You\'ll be notified about upcoming assignments and tests.',
+        icon: '/icon-192.png',
+        badge: '/icon-192.png'
+    });
+}
+
+// Check for upcoming items and send notifications
+function checkUpcomingDeadlines() {
+    if (Notification.permission !== 'granted') return;
+
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    const nextWeek = new Date(now);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    let dueTodayCount = 0;
+    let dueTomorrowCount = 0;
+    let dueThisWeekCount = 0;
+
+    classes.forEach(cls => {
+        cls.assignments.forEach(assignment => {
+            if (assignment.progress >= 10) return; // Skip completed
+
+            const dueDate = new Date(assignment.due);
+            dueDate.setHours(0, 0, 0, 0);
+
+            if (dueDate.getTime() === now.getTime()) {
+                dueTodayCount++;
+            } else if (dueDate.getTime() === tomorrow.getTime()) {
+                dueTomorrowCount++;
+            } else if (dueDate >= now && dueDate <= nextWeek) {
+                dueThisWeekCount++;
+            }
+        });
+
+        cls.tests.forEach(test => {
+            if (test.prepared >= 10) return; // Skip if ready
+
+            const testDate = new Date(test.date);
+            testDate.setHours(0, 0, 0, 0);
+
+            if (testDate.getTime() === now.getTime()) {
+                dueTodayCount++;
+            } else if (testDate.getTime() === tomorrow.getTime()) {
+                dueTomorrowCount++;
+            } else if (testDate >= now && testDate <= nextWeek) {
+                dueThisWeekCount++;
+            }
+        });
+    });
+
+    // Send notifications based on what's due
+    const lastNotificationDate = localStorage.getItem('lastNotificationDate');
+    const todayString = now.toISOString().split('T')[0];
+
+    // Only send daily summary once per day
+    if (lastNotificationDate !== todayString) {
+        if (dueTodayCount > 0) {
+            new Notification('📚 Due Today!', {
+                body: `You have ${dueTodayCount} assignment${dueTodayCount > 1 ? 's' : ''} due today. Better get started!`,
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: 'due-today'
+            });
+        }
+
+        if (dueTomorrowCount > 0) {
+            new Notification('⏰ Due Tomorrow', {
+                body: `${dueTomorrowCount} item${dueTomorrowCount > 1 ? 's' : ''} due tomorrow. Don't forget!`,
+                icon: '/icon-192.png',
+                badge: '/icon-192.png',
+                tag: 'due-tomorrow'
+            });
+        }
+
+        localStorage.setItem('lastNotificationDate', todayString);
+    }
+}
+
+// Schedule periodic notification checks
+function scheduleNotificationCheck() {
+    // Check immediately
+    checkUpcomingDeadlines();
+
+    // Then check every hour
+    setInterval(checkUpcomingDeadlines, 60 * 60 * 1000);
+
+    // Also check when page becomes visible
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+            checkUpcomingDeadlines();
+        }
+    });
+}
+
+// Initialize notifications on page load
+setTimeout(() => {
+    checkNotificationPermission();
+    if (Notification.permission === 'granted') {
+        scheduleNotificationCheck();
+    }
+}, 2000);
