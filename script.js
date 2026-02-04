@@ -1483,6 +1483,12 @@ function initializeAuth() {
     if (skipLogin) {
         isGuestMode = true;
         hideAuthModal();
+
+        // Show sign-in button for guest users
+        const signInButton = document.getElementById('signInButton');
+        if (signInButton) {
+            signInButton.style.display = 'block';
+        }
         return;
     }
 
@@ -1581,6 +1587,26 @@ function continueWithoutLogin() {
     localStorage.setItem('skipLogin', 'true');
     isGuestMode = true;
     hideAuthModal();
+
+    // Show sign-in button for guest users
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.style.display = 'block';
+    }
+}
+
+// Show auth modal again (for guest users who change their mind)
+function showAuthModalAgain() {
+    localStorage.removeItem('skipLogin');
+    isGuestMode = false;
+
+    // Hide sign-in button
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.style.display = 'none';
+    }
+
+    showAuthModal();
 }
 
 // Sign out
@@ -1607,6 +1633,12 @@ async function signOutUser() {
 // When user signs in successfully
 function onUserSignedIn(user) {
     hideAuthModal();
+
+    // Hide sign-in button (for guests)
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.style.display = 'none';
+    }
 
     // Show user button
     const userButton = document.getElementById('userButton');
