@@ -98,23 +98,88 @@ function removeClass(classIndex) {
     save();
 }
 
+// TOGGLE RECURRING OPTIONS
+function toggleRecurringOptions(classIndex, type) {
+    const prefix = type === 'assignment' ? 'a' : 't';
+    const checkbox = document.getElementById(`${prefix}-recurring-${classIndex}`);
+    const frequency = document.getElementById(`${prefix}-frequency-${classIndex}`);
+    const occurrences = document.getElementById(`${prefix}-occurrences-${classIndex}`);
+    const label = document.getElementById(`${prefix}-recurring-label-${classIndex}`);
+
+    if (checkbox.checked) {
+        frequency.style.display = 'inline-block';
+        occurrences.style.display = 'inline-block';
+        label.style.display = 'inline';
+        updateRecurringLabel(classIndex, type);
+    } else {
+        frequency.style.display = 'none';
+        occurrences.style.display = 'none';
+        label.style.display = 'none';
+    }
+}
+
+function updateRecurringLabel(classIndex, type) {
+    const prefix = type === 'assignment' ? 'a' : 't';
+    const frequency = document.getElementById(`${prefix}-frequency-${classIndex}`).value;
+    const occurrences = document.getElementById(`${prefix}-occurrences-${classIndex}`).value;
+    const label = document.getElementById(`${prefix}-recurring-label-${classIndex}`);
+
+    const freqText = frequency === 'weekly' ? 'week' : '2 weeks';
+    label.textContent = `(creates ${occurrences} ${type}s, every ${freqText})`;
+}
+
 // ADD ASSIGNMENT
 function addAssignment(classIndex){
     const nameInput = document.getElementById(`a-name-${classIndex}`);
     const dueInput = document.getElementById(`a-due-${classIndex}`);
     const timeInput = document.getElementById(`a-time-${classIndex}`);
+    const recurringCheckbox = document.getElementById(`a-recurring-${classIndex}`);
+    const frequencySelect = document.getElementById(`a-frequency-${classIndex}`);
+    const occurrencesInput = document.getElementById(`a-occurrences-${classIndex}`);
+
     if(!nameInput.value || !dueInput.value) return;
+
     const assignmentName = nameInput.value.trim().slice(0,30);
-    const dueTime = timeInput.value || '23:59'; // Default to 11:59 PM
-    classes[classIndex].assignments.push({
-        name: assignmentName,
-        due: dueInput.value,
-        time: dueTime,
-        progress: 0
-    });
+    const dueTime = timeInput.value || '23:59';
+    const isRecurring = recurringCheckbox.checked;
+
+    if (isRecurring) {
+        // Create multiple recurring assignments
+        const frequency = frequencySelect.value;
+        const occurrences = parseInt(occurrencesInput.value);
+        const interval = frequency === 'weekly' ? 7 : 14; // days
+
+        const baseDate = new Date(dueInput.value);
+
+        for (let i = 0; i < occurrences; i++) {
+            const currentDate = new Date(baseDate);
+            currentDate.setDate(currentDate.getDate() + (i * interval));
+
+            const dateStr = currentDate.toISOString().split('T')[0];
+            const assignmentNumber = occurrences > 1 ? ` #${i + 1}` : '';
+
+            classes[classIndex].assignments.push({
+                name: assignmentName + assignmentNumber,
+                due: dateStr,
+                time: dueTime,
+                progress: 0
+            });
+        }
+    } else {
+        // Create single assignment
+        classes[classIndex].assignments.push({
+            name: assignmentName,
+            due: dueInput.value,
+            time: dueTime,
+            progress: 0
+        });
+    }
+
     nameInput.value = '';
     dueInput.value = '';
     timeInput.value = '23:59';
+    recurringCheckbox.checked = false;
+    toggleRecurringOptions(classIndex, 'assignment');
 
     // Hide the form after adding
     document.getElementById(`add-assignment-form-${classIndex}`).style.display = 'none';
@@ -347,15 +412,27 @@ function render() {
             </div>
             
             <!-- Add Assignment Form (hidden by default) -->
-            <div id="add-assignment-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
+            <div id="add-assignment-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:var(--bg-tertiary); border-radius:8px;">
                 <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <input id="a-name-${classIndex}" placeholder="Assignment name" style="flex: 1; min-width: 150px;">
                     <input id="a-due-${classIndex}" type="date" style="width: 140px;">
                     <input id="a-time-${classIndex}" type="time" value="23:59" style="width: 100px;">
                 </div>
+                <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+                    <label style="display:flex; align-items:center; gap:6px; color:var(--text-primary); font-size:0.9em;">
+                        <input type="checkbox" id="a-recurring-${classIndex}" onchange="toggleRecurringOptions(${classIndex}, 'assignment')">
+                        🔄 Recurring
+                    </label>
+                    <select id="a-frequency-${classIndex}" style="display:none; padding:6px; border-radius:6px; border:2px solid var(--border); background:var(--bg-primary); color:var(--text-primary);" onchange="updateRecurringLabel(${classIndex}, 'assignment')">
+                        <option value="weekly">Weekly</option>
+                        <option value="biweekly">Every 2 weeks</option>
+                    </select>
+                    <input type="number" id="a-occurrences-${classIndex}" min="2" max="20" value="4" placeholder="Times" style="display:none; width:80px; padding:6px; border-radius:6px; border:2px solid var(--border); background:var(--bg-primary); color:var(--text-primary);" title="Number of times to repeat" oninput="updateRecurringLabel(${classIndex}, 'assignment')">
+                    <span id="a-recurring-label-${classIndex}" style="display:none; font-size:0.85em; color:var(--text-secondary);"></span>
+                </div>
                 <div style="display:flex; gap:8px;">
                     <button onclick="addAssignment(${classIndex})">Save Assignment</button>
-                    <button onclick="cancelAddAssignment(${classIndex})" style="background:#ccc;">Cancel</button>
+                    <button onclick="cancelAddAssignment(${classIndex})" style="background:var(--bg-secondary); color:var(--text-primary);">Cancel</button>
                 </div>
             </div>
                 
@@ -1394,268 +1471,3 @@ setTimeout(() => {
         scheduleNotificationCheck();
     }
 }, 2000);
-
-// FIREBASE AUTHENTICATION & SYNC
-let currentUser = null;
-let isGuestMode = false;
-
-function initializeAuth() {
-    // Check if user wants to skip login
-    const skipLogin = localStorage.getItem('skipLogin');
-
-    if (skipLogin) {
-        isGuestMode = true;
-        hideAuthModal();
-        return;
-    }
-
-    // Listen for auth state changes
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-        if (user) {
-            currentUser = user;
-            onUserSignedIn(user);
-        } else {
-            currentUser = null;
-            showAuthModal();
-        }
-    });
-}
-
-function showAuthModal() {
-    const modal = document.getElementById('authModal');
-    if (modal) {
-        modal.style.display = 'flex';
-    }
-}
-
-function hideAuthModal() {
-    const modal = document.getElementById('authModal');
-    if (modal) {
-        modal.style.display = 'none';
-    }
-}
-
-function showAuthError(message) {
-    const errorDiv = document.getElementById('authError');
-    if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
-    }
-}
-
-// Sign in with email/password
-async function signInWithEmail() {
-    const email = document.getElementById('authEmail').value.trim();
-    const password = document.getElementById('authPassword').value;
-
-    if (!email || !password) {
-        showAuthError('Please enter email and password');
-        return;
-    }
-
-    try {
-        await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
-    } catch (error) {
-        console.error('Sign in error:', error);
-        showAuthError(error.message || 'Failed to sign in');
-    }
-}
-
-// Sign up with email/password
-async function signUpWithEmail() {
-    const email = document.getElementById('authEmail').value.trim();
-    const password = document.getElementById('authPassword').value;
-
-    if (!email || !password) {
-        showAuthError('Please enter email and password');
-        return;
-    }
-
-    if (password.length < 6) {
-        showAuthError('Password must be at least 6 characters');
-        return;
-    }
-
-    try {
-        await window.firebaseCreateUserWithEmailAndPassword(window.firebaseAuth, email, password);
-    } catch (error) {
-        console.error('Sign up error:', error);
-        showAuthError(error.message || 'Failed to create account');
-    }
-}
-
-// Sign in with Google
-async function signInWithGoogle() {
-    const provider = new window.firebaseGoogleAuthProvider();
-
-    try {
-        await window.firebaseSignInWithPopup(window.firebaseAuth, provider);
-    } catch (error) {
-        console.error('Google sign in error:', error);
-        showAuthError(error.message || 'Failed to sign in with Google');
-    }
-}
-
-// Continue without signing in
-function continueWithoutLogin() {
-    localStorage.setItem('skipLogin', 'true');
-    isGuestMode = true;
-    hideAuthModal();
-}
-
-// Sign out
-async function signOutUser() {
-    try {
-        await window.firebaseSignOut(window.firebaseAuth);
-        localStorage.removeItem('skipLogin');
-        isGuestMode = false;
-
-        // Clear local data
-        classes = [];
-        localStorage.removeItem('classes');
-        render();
-
-        // Show auth modal again
-        showAuthModal();
-        closeUserMenu();
-    } catch (error) {
-        console.error('Sign out error:', error);
-        alert('Failed to sign out');
-    }
-}
-
-// When user signs in successfully
-function onUserSignedIn(user) {
-    hideAuthModal();
-
-    // Show user button
-    const userButton = document.getElementById('userButton');
-    if (userButton) {
-        userButton.style.display = 'block';
-    }
-
-    // Load user data from Firebase
-    loadUserDataFromFirebase(user.uid);
-
-    // Set up real-time sync
-    setupRealtimeSync(user.uid);
-}
-
-// Load data from Firebase
-async function loadUserDataFromFirebase(userId) {
-    try {
-        const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
-        const snapshot = await window.firebaseGet(userDataRef);
-
-        if (snapshot.exists()) {
-            const firebaseData = snapshot.val();
-
-            // Merge with local data (keep newest)
-            const localData = JSON.parse(localStorage.getItem('classes') || '[]');
-
-            if (localData.length === 0) {
-                // No local data, use Firebase data
-                classes = firebaseData;
-            } else {
-                // Ask user which data to keep
-                const useFirebase = confirm(
-                    'You have data on this device and in the cloud.\n\n' +
-                    'Click OK to use cloud data\n' +
-                    'Click Cancel to keep local data and upload to cloud'
-                );
-
-                if (useFirebase) {
-                    classes = firebaseData;
-                } else {
-                    classes = localData;
-                    saveToFirebase(userId);
-                }
-            }
-
-            localStorage.setItem('classes', JSON.stringify(classes));
-            render();
-        } else {
-            // No data in Firebase, upload local data
-            const localData = JSON.parse(localStorage.getItem('classes') || '[]');
-            if (localData.length > 0) {
-                classes = localData;
-                saveToFirebase(userId);
-            }
-        }
-    } catch (error) {
-        console.error('Error loading data from Firebase:', error);
-    }
-}
-
-// Save data to Firebase
-function saveToFirebase(userId) {
-    if (!userId || isGuestMode) return;
-
-    try {
-        const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
-        window.firebaseSet(userDataRef, classes);
-    } catch (error) {
-        console.error('Error saving to Firebase:', error);
-    }
-}
-
-// Set up real-time sync
-function setupRealtimeSync(userId) {
-    const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
-
-    window.firebaseOnValue(userDataRef, (snapshot) => {
-        if (snapshot.exists()) {
-            const firebaseData = snapshot.val();
-
-            // Only update if data is different (prevent infinite loop)
-            if (JSON.stringify(firebaseData) !== JSON.stringify(classes)) {
-                classes = firebaseData;
-                localStorage.setItem('classes', JSON.stringify(classes));
-                render();
-            }
-        }
-    });
-}
-
-// Override save function to also save to Firebase
-const originalSave = save;
-save = function() {
-    originalSave();
-    if (currentUser) {
-        saveToFirebase(currentUser.uid);
-    }
-};
-
-// Show user menu
-function showUserMenu() {
-    const email = currentUser?.email || 'Guest';
-    const menuHTML = `
-        <div id="userMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:16px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:250px;" onclick="event.stopPropagation()">
-            <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
-                <div style="font-size:0.85em; color:var(--text-secondary);">Signed in as</div>
-                <div style="font-weight:600; color:var(--text-primary); margin-top:4px; word-break:break-all;">${email}</div>
-            </div>
-            <button onclick="signOutUser()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                <span>🚪</span> Sign Out
-            </button>
-        </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', menuHTML);
-
-    // Close menu when clicking outside
-    setTimeout(() => {
-        document.addEventListener('click', closeUserMenu);
-    }, 100);
-}
-
-function closeUserMenu() {
-    const menu = document.getElementById('userMenu');
-    if (menu) {
-        menu.remove();
-        document.removeEventListener('click', closeUserMenu);
-    }
-}
