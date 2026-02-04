@@ -1509,19 +1509,21 @@ function initializeAuth() {
     window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
         console.log('Auth state changed:', user ? user.email : 'no user');
 
+        // Firebase has now finished initializing auth
+        authInitialized = true;
+
         if (user) {
             currentUser = user;
-            authInitialized = true;
             onUserSignedIn(user);
         } else {
             currentUser = null;
 
-            // IMPORTANT: only show modal AFTER Firebase finishes init
-            if (authInitialized && !isGuestMode) {
-                showAuthModal();
+            if (!isGuestMode) {
+                showAuthModal(); // ✅ now safe to show
             }
         }
     });
+
 }
 
 function showAuthModal() {
@@ -1620,15 +1622,10 @@ async function checkRedirectResult() {
 
         const result = await getRedirectResult(window.firebaseAuth);
 
-        if (result && result.user) {
-            console.log('Google sign-in successful!', result.user.email);
+        if (result?.user) {
+            console.log('Google sign-in successful:', result.user.email);
         }
-
-        // 🔑 Tell the app Firebase is done restoring session
-        authInitialized = true;
-
     } catch (error) {
-        authInitialized = true;
         if (error.code !== 'auth/popup-closed-by-user') {
             console.error('Redirect result error:', error);
         }
@@ -1832,3 +1829,5 @@ function closeUserMenu() {
         document.removeEventListener('click', closeUserMenu);
     }
 }
+
+initializeAuth();
