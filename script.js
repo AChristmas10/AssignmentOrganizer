@@ -1486,6 +1486,9 @@ function initializeAuth() {
 
     console.log('Firebase ready, initializing auth...');
 
+    // CHECK FOR REDIRECT RESULT FIRST (important!)
+    checkRedirectResult();
+
     // Check if user wants to skip login
     const skipLogin = localStorage.getItem('skipLogin');
 
@@ -1504,6 +1507,7 @@ function initializeAuth() {
     // Listen for auth state changes
     window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
         console.log('Auth state changed:', user ? user.email : 'no user');
+
         if (user) {
             currentUser = user;
             onUserSignedIn(user);
@@ -1582,15 +1586,41 @@ async function signUpWithEmail() {
     }
 }
 
-// Sign in with Google
+// Sign in with Google - USE REDIRECT (more reliable)
 async function signInWithGoogle() {
     const provider = new window.firebaseGoogleAuthProvider();
 
     try {
-        await window.firebaseSignInWithPopup(window.firebaseAuth, provider);
+        // Import redirect function
+        const auth = window.firebaseAuth;
+
+        // Use signInWithRedirect - this works better on desktop
+        const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+
+        console.log('Starting Google sign-in redirect...');
+        await signInWithRedirect(auth, provider);
+
+        // Page will redirect away, then come back after sign-in
     } catch (error) {
         console.error('Google sign in error:', error);
         showAuthError(error.message || 'Failed to sign in with Google');
+    }
+}
+
+// Handle redirect result when user comes back from Google sign-in
+async function checkRedirectResult() {
+    try {
+        const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+        const result = await getRedirectResult(window.firebaseAuth);
+
+        if (result && result.user) {
+            console.log('Google sign-in successful!', result.user.email);
+            // The auth state listener will handle the rest
+        }
+    } catch (error) {
+        if (error.code !== 'auth/popup-closed-by-user') {
+            console.error('Redirect result error:', error);
+        }
     }
 }
 
@@ -1644,70 +1674,80 @@ async function signOutUser() {
 
 // When user signs in successfully
 function onUserSignedIn(user) {
-    hideAuthModal();
+    console.log('User signed in:', user.email);
 
-    // Hide sign-in button (for guests)
+    // Set flag
+    isGuestMode = false;
+
+    // Hide modal and sign-in button
+    hideAuthModal();
     const signInButton = document.getElementById('signInButton');
-    if (signInButton) {
-        signInButton.style.display = 'none';
-    }
+    if (signInButton) signInButton.style.display = 'none';
 
     // Show user button
     const userButton = document.getElementById('userButton');
-    if (userButton) {
-        userButton.style.display = 'block';
-    }
+    if (userButton) userButton.style.display = 'block';
 
-    // Load user data from Firebase
+    // Load data (this runs async, won't block)
     loadUserDataFromFirebase(user.uid);
-
-    // Set up real-time sync
     setupRealtimeSync(user.uid);
 }
 
 // Load data from Firebase
 async function loadUserDataFromFirebase(userId) {
+    console.log('Loading data for user:', userId);
+
     try {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
         const snapshot = await window.firebaseGet(userDataRef);
 
         if (snapshot.exists()) {
             const firebaseData = snapshot.val();
-
-            // Merge with local data (keep newest)
             const localData = JSON.parse(localStorage.getItem('classes') || '[]');
 
             if (localData.length === 0) {
-                // No local data, use Firebase data
+                // No local data, use cloud data
                 classes = firebaseData;
             } else {
-                // Ask user which data to keep
-                const useFirebase = confirm(
-                    'You have data on this device and in the cloud.\n\n' +
-                    'Click OK to use cloud data\n' +
-                    'Click Cancel to keep local data and upload to cloud'
-                );
+                // Only ask ONCE per session
+                const asked = sessionStorage.getItem('mergeAsked');
 
-                if (useFirebase) {
-                    classes = firebaseData;
+                if (!asked) {
+                    sessionStorage.setItem('mergeAsked', 'true');
+
+                    const useCloud = confirm(
+                        'You have data on this device and in the cloud.\n\n' +
+                        'OK = Use cloud data\n' +
+                        'Cancel = Keep local data and sync to cloud'
+                    );
+
+                    if (useCloud) {
+                        classes = firebaseData;
+                    } else {
+                        classes = localData;
+                        saveToFirebase(userId);
+                    }
                 } else {
+                    // Already asked, use local
                     classes = localData;
-                    saveToFirebase(userId);
                 }
             }
 
             localStorage.setItem('classes', JSON.stringify(classes));
             render();
         } else {
-            // No data in Firebase, upload local data
+            // No cloud data, upload local if exists
             const localData = JSON.parse(localStorage.getItem('classes') || '[]');
             if (localData.length > 0) {
                 classes = localData;
                 saveToFirebase(userId);
             }
+            render();
         }
     } catch (error) {
-        console.error('Error loading data from Firebase:', error);
+        console.error('Load error:', error);
+        classes = JSON.parse(localStorage.getItem('classes') || '[]');
+        render();
     }
 }
 
