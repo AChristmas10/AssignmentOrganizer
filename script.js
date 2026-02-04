@@ -1471,3 +1471,300 @@ setTimeout(() => {
         scheduleNotificationCheck();
     }
 }, 2000);
+
+// FIREBASE AUTHENTICATION & SYNC
+let currentUser = null;
+let isGuestMode = false;
+
+function initializeAuth() {
+    // Check if user wants to skip login
+    const skipLogin = localStorage.getItem('skipLogin');
+
+    if (skipLogin) {
+        isGuestMode = true;
+        hideAuthModal();
+
+        // Show sign-in button for guest users
+        const signInButton = document.getElementById('signInButton');
+        if (signInButton) {
+            signInButton.style.display = 'block';
+        }
+        return;
+    }
+
+    // Listen for auth state changes
+    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+        if (user) {
+            currentUser = user;
+            onUserSignedIn(user);
+        } else {
+            currentUser = null;
+            showAuthModal();
+        }
+    });
+}
+
+function showAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+
+function hideAuthModal() {
+    const modal = document.getElementById('authModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function showAuthError(message) {
+    const errorDiv = document.getElementById('authError');
+    if (errorDiv) {
+        errorDiv.textContent = message;
+        errorDiv.style.display = 'block';
+        setTimeout(() => {
+            errorDiv.style.display = 'none';
+        }, 5000);
+    }
+}
+
+// Sign in with email/password
+async function signInWithEmail() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+
+    if (!email || !password) {
+        showAuthError('Please enter email and password');
+        return;
+    }
+
+    try {
+        await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
+    } catch (error) {
+        console.error('Sign in error:', error);
+        showAuthError(error.message || 'Failed to sign in');
+    }
+}
+
+// Sign up with email/password
+async function signUpWithEmail() {
+    const email = document.getElementById('authEmail').value.trim();
+    const password = document.getElementById('authPassword').value;
+
+    if (!email || !password) {
+        showAuthError('Please enter email and password');
+        return;
+    }
+
+    if (password.length < 6) {
+        showAuthError('Password must be at least 6 characters');
+        return;
+    }
+
+    try {
+        await window.firebaseCreateUserWithEmailAndPassword(window.firebaseAuth, email, password);
+    } catch (error) {
+        console.error('Sign up error:', error);
+        showAuthError(error.message || 'Failed to create account');
+    }
+}
+
+// Sign in with Google
+async function signInWithGoogle() {
+    const provider = new window.firebaseGoogleAuthProvider();
+
+    try {
+        await window.firebaseSignInWithPopup(window.firebaseAuth, provider);
+    } catch (error) {
+        console.error('Google sign in error:', error);
+        showAuthError(error.message || 'Failed to sign in with Google');
+    }
+}
+
+// Continue without signing in
+function continueWithoutLogin() {
+    localStorage.setItem('skipLogin', 'true');
+    isGuestMode = true;
+    hideAuthModal();
+
+    // Show sign-in button for guest users
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.style.display = 'block';
+    }
+}
+
+// Show auth modal again (for guest users who change their mind)
+function showAuthModalAgain() {
+    localStorage.removeItem('skipLogin');
+    isGuestMode = false;
+
+    // Hide sign-in button
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.style.display = 'none';
+    }
+
+    showAuthModal();
+}
+
+// Sign out
+async function signOutUser() {
+    try {
+        await window.firebaseSignOut(window.firebaseAuth);
+        localStorage.removeItem('skipLogin');
+        isGuestMode = false;
+
+        // Clear local data
+        classes = [];
+        localStorage.removeItem('classes');
+        render();
+
+        // Show auth modal again
+        showAuthModal();
+        closeUserMenu();
+    } catch (error) {
+        console.error('Sign out error:', error);
+        alert('Failed to sign out');
+    }
+}
+
+// When user signs in successfully
+function onUserSignedIn(user) {
+    hideAuthModal();
+
+    // Hide sign-in button (for guests)
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) {
+        signInButton.style.display = 'none';
+    }
+
+    // Show user button
+    const userButton = document.getElementById('userButton');
+    if (userButton) {
+        userButton.style.display = 'block';
+    }
+
+    // Load user data from Firebase
+    loadUserDataFromFirebase(user.uid);
+
+    // Set up real-time sync
+    setupRealtimeSync(user.uid);
+}
+
+// Load data from Firebase
+async function loadUserDataFromFirebase(userId) {
+    try {
+        const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
+        const snapshot = await window.firebaseGet(userDataRef);
+
+        if (snapshot.exists()) {
+            const firebaseData = snapshot.val();
+
+            // Merge with local data (keep newest)
+            const localData = JSON.parse(localStorage.getItem('classes') || '[]');
+
+            if (localData.length === 0) {
+                // No local data, use Firebase data
+                classes = firebaseData;
+            } else {
+                // Ask user which data to keep
+                const useFirebase = confirm(
+                    'You have data on this device and in the cloud.\n\n' +
+                    'Click OK to use cloud data\n' +
+                    'Click Cancel to keep local data and upload to cloud'
+                );
+
+                if (useFirebase) {
+                    classes = firebaseData;
+                } else {
+                    classes = localData;
+                    saveToFirebase(userId);
+                }
+            }
+
+            localStorage.setItem('classes', JSON.stringify(classes));
+            render();
+        } else {
+            // No data in Firebase, upload local data
+            const localData = JSON.parse(localStorage.getItem('classes') || '[]');
+            if (localData.length > 0) {
+                classes = localData;
+                saveToFirebase(userId);
+            }
+        }
+    } catch (error) {
+        console.error('Error loading data from Firebase:', error);
+    }
+}
+
+// Save data to Firebase
+function saveToFirebase(userId) {
+    if (!userId || isGuestMode) return;
+
+    try {
+        const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
+        window.firebaseSet(userDataRef, classes);
+    } catch (error) {
+        console.error('Error saving to Firebase:', error);
+    }
+}
+
+// Set up real-time sync
+function setupRealtimeSync(userId) {
+    const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
+
+    window.firebaseOnValue(userDataRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const firebaseData = snapshot.val();
+
+            // Only update if data is different (prevent infinite loop)
+            if (JSON.stringify(firebaseData) !== JSON.stringify(classes)) {
+                classes = firebaseData;
+                localStorage.setItem('classes', JSON.stringify(classes));
+                render();
+            }
+        }
+    });
+}
+
+// Override save function to also save to Firebase
+const originalSave = save;
+save = function() {
+    originalSave();
+    if (currentUser) {
+        saveToFirebase(currentUser.uid);
+    }
+};
+
+// Show user menu
+function showUserMenu() {
+    const email = currentUser?.email || 'Guest';
+    const menuHTML = `
+        <div id="userMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:16px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:250px;" onclick="event.stopPropagation()">
+            <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
+                <div style="font-size:0.85em; color:var(--text-secondary);">Signed in as</div>
+                <div style="font-weight:600; color:var(--text-primary); margin-top:4px; word-break:break-all;">${email}</div>
+            </div>
+            <button onclick="signOutUser()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                <span>🚪</span> Sign Out
+            </button>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', menuHTML);
+
+    // Close menu when clicking outside
+    setTimeout(() => {
+        document.addEventListener('click', closeUserMenu);
+    }, 100);
+}
+
+function closeUserMenu() {
+    const menu = document.getElementById('userMenu');
+    if (menu) {
+        menu.remove();
+        document.removeEventListener('click', closeUserMenu);
+    }
+}
