@@ -1473,6 +1473,7 @@ setTimeout(() => {
 }, 2000);
 
 // FIREBASE AUTHENTICATION & SYNC
+let authInitialized = false;
 let currentUser = null;
 let isGuestMode = false;
 
@@ -1510,10 +1511,13 @@ function initializeAuth() {
 
         if (user) {
             currentUser = user;
+            authInitialized = true;
             onUserSignedIn(user);
         } else {
             currentUser = null;
-            if (!isGuestMode) {
+
+            // IMPORTANT: only show modal AFTER Firebase finishes init
+            if (authInitialized && !isGuestMode) {
                 showAuthModal();
             }
         }
@@ -1610,19 +1614,27 @@ async function signInWithGoogle() {
 // Handle redirect result when user comes back from Google sign-in
 async function checkRedirectResult() {
     try {
-        const { getRedirectResult } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
+        const { getRedirectResult } = await import(
+            'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js'
+            );
+
         const result = await getRedirectResult(window.firebaseAuth);
 
         if (result && result.user) {
             console.log('Google sign-in successful!', result.user.email);
-            // The auth state listener will handle the rest
         }
+
+        // 🔑 Tell the app Firebase is done restoring session
+        authInitialized = true;
+
     } catch (error) {
+        authInitialized = true;
         if (error.code !== 'auth/popup-closed-by-user') {
             console.error('Redirect result error:', error);
         }
     }
 }
+
 
 // Continue without signing in
 function continueWithoutLogin() {
