@@ -1477,6 +1477,15 @@ let currentUser = null;
 let isGuestMode = false;
 
 function initializeAuth() {
+    // Wait for Firebase to be ready
+    if (!window.firebaseAuth || !window.firebaseReady) {
+        console.log('Waiting for Firebase to initialize...');
+        setTimeout(initializeAuth, 100);
+        return;
+    }
+
+    console.log('Firebase ready, initializing auth...');
+
     // Check if user wants to skip login
     const skipLogin = localStorage.getItem('skipLogin');
 
@@ -1494,12 +1503,15 @@ function initializeAuth() {
 
     // Listen for auth state changes
     window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+        console.log('Auth state changed:', user ? user.email : 'no user');
         if (user) {
             currentUser = user;
             onUserSignedIn(user);
         } else {
             currentUser = null;
-            showAuthModal();
+            if (!isGuestMode) {
+                showAuthModal();
+            }
         }
     });
 }
@@ -1507,7 +1519,7 @@ function initializeAuth() {
 function showAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
-        modal.style.display = 'flex';
+        modal.style.display = 'flex';  // Changed from just setting display
     }
 }
 
