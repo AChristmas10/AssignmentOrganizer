@@ -1472,73 +1472,91 @@ setTimeout(() => {
     }
 }, 2000);
 
-// FIREBASE AUTHENTICATION & SYNC - FIXED VERSION
+// FIREBASE AUTHENTICATION & SYNC - COMPLETE WORKING VERSION
 let currentUser = null;
 let isGuestMode = false;
+let authInitialized = false;
 
 function initializeAuth() {
+    // Prevent multiple initializations
+    if (authInitialized) return;
+
     // Wait for Firebase to be ready
     if (!window.firebaseAuth || !window.firebaseReady) {
         setTimeout(initializeAuth, 100);
         return;
     }
 
-    console.log('🔥 Initializing auth...');
+    authInitialized = true;
+    console.log('🔥 Firebase auth initializing...');
 
     // Check if user wants to skip login
     const skipLogin = localStorage.getItem('skipLogin');
 
     if (skipLogin) {
-        console.log('👤 Guest mode enabled');
+        console.log('👤 Guest mode - using localStorage only');
         isGuestMode = true;
         const signInButton = document.getElementById('signInButton');
         if (signInButton) signInButton.style.display = 'block';
-        return; // Exit - don't set up auth listener
+        return; // Don't set up Firebase listener in guest mode
     }
 
-    // Listen for auth state changes
-    let hasCheckedInitialState = false;
-
+    // Set up auth state listener
     window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-        console.log('Auth state:', user ? user.email : 'no user');
+        console.log('🔐 Auth state changed:', user ? user.email : 'not signed in');
 
         if (user) {
-            // User is signed in
-            currentUser = user;
-            hideAuthModal();
-
-            const signInButton = document.getElementById('signInButton');
-            if (signInButton) signInButton.style.display = 'none';
-
-            const userButton = document.getElementById('userButton');
-            if (userButton) userButton.style.display = 'block';
-
-            // Only load data once
-            if (!hasCheckedInitialState) {
-                loadUserDataFromFirebase(user.uid);
-                setupRealtimeSync(user.uid);
-            }
+            // User IS signed in
+            handleUserSignedIn(user);
         } else {
-            // User is signed out
-            currentUser = null;
-
-            // Only show modal if NOT in guest mode AND initial check is done
-            if (!isGuestMode && hasCheckedInitialState) {
-                showAuthModal();
-            } else if (!hasCheckedInitialState) {
-                // First time - show modal
-                showAuthModal();
-            }
+            // User is NOT signed in
+            handleUserSignedOut();
         }
-
-        hasCheckedInitialState = true;
     });
+}
+
+function handleUserSignedIn(user) {
+    currentUser = user;
+    isGuestMode = false;
+
+    console.log('✅ User signed in:', user.email);
+
+    // Hide modal and sign-in button
+    hideAuthModal();
+    const signInButton = document.getElementById('signInButton');
+    if (signInButton) signInButton.style.display = 'none';
+
+    // Show user button
+    const userButton = document.getElementById('userButton');
+    if (userButton) userButton.style.display = 'block';
+
+    // Load user's data from Firebase
+    loadUserDataFromFirebase(user.uid);
+
+    // Set up real-time sync
+    setupRealtimeSync(user.uid);
+}
+
+function handleUserSignedOut() {
+    currentUser = null;
+
+    console.log('❌ User signed out');
+
+    // Only show modal if not in guest mode
+    if (!isGuestMode) {
+        showAuthModal();
+    }
+
+    // Hide user button
+    const userButton = document.getElementById('userButton');
+    if (userButton) userButton.style.display = 'none';
 }
 
 function showAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
         modal.style.display = 'flex';
+        console.log('📋 Showing auth modal');
     }
 }
 
@@ -1546,6 +1564,7 @@ function hideAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
         modal.style.display = 'none';
+        console.log('✖️ Hiding auth modal');
     }
 }
 
@@ -1558,6 +1577,7 @@ function showAuthError(message) {
     }
 }
 
+// SIGN IN WITH EMAIL
 async function signInWithEmail() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
@@ -1568,14 +1588,16 @@ async function signInWithEmail() {
     }
 
     try {
+        console.log('📧 Attempting email sign-in...');
         await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
-        // Auth state listener will handle the rest
+        console.log('✅ Email sign-in successful');
     } catch (error) {
-        console.error('Sign in error:', error);
+        console.error('❌ Sign in error:', error);
         showAuthError(error.message || 'Failed to sign in');
     }
 }
 
+// SIGN UP WITH EMAIL
 async function signUpWithEmail() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
@@ -1591,27 +1613,32 @@ async function signUpWithEmail() {
     }
 
     try {
+        console.log('📝 Creating account...');
         await window.firebaseCreateUserWithEmailAndPassword(window.firebaseAuth, email, password);
-        // Auth state listener will handle the rest
+        console.log('✅ Account created successfully');
     } catch (error) {
-        console.error('Sign up error:', error);
+        console.error('❌ Sign up error:', error);
         showAuthError(error.message || 'Failed to create account');
     }
 }
 
+// SIGN IN WITH GOOGLE
 async function signInWithGoogle() {
     const provider = new window.firebaseGoogleAuthProvider();
 
     try {
+        console.log('🔵 Attempting Google sign-in...');
         await window.firebaseSignInWithPopup(window.firebaseAuth, provider);
-        // Auth state listener will handle the rest
+        console.log('✅ Google sign-in successful');
     } catch (error) {
-        console.error('Google sign in error:', error);
+        console.error('❌ Google sign in error:', error);
         showAuthError(error.message || 'Failed to sign in with Google');
     }
 }
 
+// CONTINUE WITHOUT SIGNING IN
 function continueWithoutLogin() {
+    console.log('👤 Continuing as guest');
     localStorage.setItem('skipLogin', 'true');
     isGuestMode = true;
     hideAuthModal();
@@ -1620,7 +1647,9 @@ function continueWithoutLogin() {
     if (signInButton) signInButton.style.display = 'block';
 }
 
+// SHOW AUTH MODAL AGAIN (for guests who change their mind)
 function showAuthModalAgain() {
+    console.log('🔄 Guest choosing to sign in');
     localStorage.removeItem('skipLogin');
     isGuestMode = false;
 
@@ -1630,38 +1659,47 @@ function showAuthModalAgain() {
     showAuthModal();
 }
 
+// SIGN OUT
 async function signOutUser() {
     try {
+        console.log('🚪 Signing out...');
         await window.firebaseSignOut(window.firebaseAuth);
         localStorage.removeItem('skipLogin');
         isGuestMode = false;
 
+        // Clear local data
         classes = [];
         localStorage.removeItem('classes');
         render();
 
-        showAuthModal();
+        console.log('✅ Signed out successfully');
+
         closeUserMenu();
     } catch (error) {
-        console.error('Sign out error:', error);
+        console.error('❌ Sign out error:', error);
         alert('Failed to sign out');
     }
 }
 
+// LOAD DATA FROM FIREBASE
 async function loadUserDataFromFirebase(userId) {
-    console.log('📥 Loading data for user:', userId);
+    console.log('📥 Loading data from Firebase for user:', userId);
 
     try {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
         const snapshot = await window.firebaseGet(userDataRef);
 
         if (snapshot.exists()) {
+            console.log('☁️ Cloud data found');
             const firebaseData = snapshot.val();
             const localData = JSON.parse(localStorage.getItem('classes') || '[]');
 
             if (localData.length === 0) {
+                // No local data - use cloud data
+                console.log('✅ Using cloud data (no local data)');
                 classes = firebaseData;
             } else {
+                // Both local and cloud data exist - ask user
                 const asked = sessionStorage.getItem('mergeAsked');
 
                 if (!asked) {
@@ -1669,53 +1707,80 @@ async function loadUserDataFromFirebase(userId) {
 
                     const useCloud = confirm(
                         'You have data on this device and in the cloud.\n\n' +
-                        'OK = Use cloud data\n' +
-                        'Cancel = Keep local data and sync to cloud'
+                        'Click OK to use cloud data\n' +
+                        'Click Cancel to keep local data and upload to cloud'
                     );
 
-                    classes = useCloud ? firebaseData : localData;
-                    if (!useCloud) saveToFirebase(userId);
+                    if (useCloud) {
+                        console.log('☁️ User chose cloud data');
+                        classes = firebaseData;
+                    } else {
+                        console.log('💾 User chose local data - uploading to cloud');
+                        classes = localData;
+                        saveToFirebase(userId);
+                    }
                 } else {
+                    // Already asked - use local
                     classes = localData;
                 }
             }
 
             localStorage.setItem('classes', JSON.stringify(classes));
             render();
+            console.log('✅ Data loaded successfully');
         } else {
+            // No cloud data - check for local data
+            console.log('📭 No cloud data found');
             const localData = JSON.parse(localStorage.getItem('classes') || '[]');
+
             if (localData.length > 0) {
+                console.log('💾 Uploading local data to cloud');
                 classes = localData;
                 saveToFirebase(userId);
+            } else {
+                console.log('📝 Starting fresh - no data anywhere');
+                classes = [];
             }
+
             render();
         }
     } catch (error) {
-        console.error('Load error:', error);
+        console.error('❌ Error loading data from Firebase:', error);
+        // Fallback to local data on error
         classes = JSON.parse(localStorage.getItem('classes') || '[]');
         render();
     }
 }
 
+// SAVE TO FIREBASE
 function saveToFirebase(userId) {
-    if (!userId || isGuestMode) return;
+    if (!userId || isGuestMode) {
+        console.log('⏭️ Skipping Firebase save (guest mode or no user)');
+        return;
+    }
 
     try {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
         window.firebaseSet(userDataRef, classes);
+        console.log('☁️ Saved to Firebase');
     } catch (error) {
-        console.error('Save error:', error);
+        console.error('❌ Error saving to Firebase:', error);
     }
 }
 
+// SET UP REAL-TIME SYNC
 function setupRealtimeSync(userId) {
+    console.log('🔄 Setting up real-time sync');
+
     const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
 
     window.firebaseOnValue(userDataRef, (snapshot) => {
         if (snapshot.exists()) {
             const firebaseData = snapshot.val();
 
+            // Only update if data actually changed
             if (JSON.stringify(firebaseData) !== JSON.stringify(classes)) {
+                console.log('🔄 Syncing data from cloud');
                 classes = firebaseData;
                 localStorage.setItem('classes', JSON.stringify(classes));
                 render();
@@ -1724,14 +1789,22 @@ function setupRealtimeSync(userId) {
     });
 }
 
+// OVERRIDE SAVE FUNCTION TO INCLUDE FIREBASE
 const originalSave = save;
 save = function() {
+    // Always save to localStorage first
     originalSave();
-    if (currentUser) {
+
+    // Also save to Firebase if user is signed in
+    if (currentUser && !isGuestMode) {
+        console.log('💾 Saving to localStorage AND Firebase');
         saveToFirebase(currentUser.uid);
+    } else {
+        console.log('💾 Saving to localStorage only');
     }
 };
 
+// SHOW USER MENU
 function showUserMenu() {
     const email = currentUser?.email || 'Guest';
     const menuHTML = `
@@ -1761,11 +1834,12 @@ function closeUserMenu() {
     }
 }
 
-// Initialize auth when script loads
+// INITIALIZE AUTH WHEN READY
+console.log('⏳ Waiting for Firebase to be ready...');
+
 if (window.firebaseReady) {
     initializeAuth();
 } else {
-    // Wait for Firebase to load
     const checkFirebase = setInterval(() => {
         if (window.firebaseReady) {
             clearInterval(checkFirebase);
