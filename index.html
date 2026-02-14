@@ -90,7 +90,7 @@
 
 <!-- Auth Modal -->
 <div id="authModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:2000; align-items:center; justify-content:center;">
-    <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:90%; box-shadow:var(--shadow-lg);">
+    <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:90%; box-shadow:var(--shadow-lg);" onclick="event.stopPropagation()">
         <h2 style="margin:0 0 8px 0; color:var(--text-primary); text-align:center;">Welcome to Do2Date</h2>
         <p style="text-align:center; color:var(--text-secondary); margin:0 0 24px 0; font-size:0.9em;">Sign in to sync your data across devices</p>
 
@@ -119,7 +119,7 @@
     </div>
 </div>
 
-<script src="script.js?v=28"></script>
+<script src="script.js?v=30"></script>
 
 <!-- Firebase SDK -->
 <script type="module">
@@ -157,16 +157,11 @@
     window.firebaseOnValue = onValue;
     window.firebaseOnAuthStateChanged = onAuthStateChanged;
 
-    // Mark Firebase as ready and initialize auth
+    // Mark Firebase as ready
     window.firebaseReady = true;
-    console.log('Firebase SDK loaded successfully');
+    console.log('✅ Firebase SDK loaded');
 
-    // Initialize auth after a small delay to ensure everything is ready
-    setTimeout(() => {
-        if (typeof initializeAuth === 'function') {
-            initializeAuth();
-        }
-    }, 500);
+    // DON'T call initializeAuth here - let the script call it when ready
 </script>
 </body>
 </html>

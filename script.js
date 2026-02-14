@@ -1472,64 +1472,73 @@ setTimeout(() => {
     }
 }, 2000);
 
-// FIREBASE AUTHENTICATION & SYNC
-let authInitialized = false;
+// FIREBASE AUTHENTICATION & SYNC - FIXED VERSION
 let currentUser = null;
 let isGuestMode = false;
 
 function initializeAuth() {
     // Wait for Firebase to be ready
     if (!window.firebaseAuth || !window.firebaseReady) {
-        console.log('Waiting for Firebase to initialize...');
         setTimeout(initializeAuth, 100);
         return;
     }
 
-    console.log('Firebase ready, initializing auth...');
-
-    // CHECK FOR REDIRECT RESULT FIRST (important!)
-    checkRedirectResult();
+    console.log('🔥 Initializing auth...');
 
     // Check if user wants to skip login
     const skipLogin = localStorage.getItem('skipLogin');
 
     if (skipLogin) {
+        console.log('👤 Guest mode enabled');
         isGuestMode = true;
-        hideAuthModal();
-
-        // Show sign-in button for guest users
         const signInButton = document.getElementById('signInButton');
-        if (signInButton) {
-            signInButton.style.display = 'block';
-        }
-        return;
+        if (signInButton) signInButton.style.display = 'block';
+        return; // Exit - don't set up auth listener
     }
 
     // Listen for auth state changes
-    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-        console.log('Auth state changed:', user ? user.email : 'no user');
+    let hasCheckedInitialState = false;
 
-        // Firebase has now finished initializing auth
-        authInitialized = true;
+    window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+        console.log('Auth state:', user ? user.email : 'no user');
 
         if (user) {
+            // User is signed in
             currentUser = user;
-            onUserSignedIn(user);
+            hideAuthModal();
+
+            const signInButton = document.getElementById('signInButton');
+            if (signInButton) signInButton.style.display = 'none';
+
+            const userButton = document.getElementById('userButton');
+            if (userButton) userButton.style.display = 'block';
+
+            // Only load data once
+            if (!hasCheckedInitialState) {
+                loadUserDataFromFirebase(user.uid);
+                setupRealtimeSync(user.uid);
+            }
         } else {
+            // User is signed out
             currentUser = null;
 
-            if (!isGuestMode) {
-                showAuthModal(); // ✅ now safe to show
+            // Only show modal if NOT in guest mode AND initial check is done
+            if (!isGuestMode && hasCheckedInitialState) {
+                showAuthModal();
+            } else if (!hasCheckedInitialState) {
+                // First time - show modal
+                showAuthModal();
             }
         }
-    });
 
+        hasCheckedInitialState = true;
+    });
 }
 
 function showAuthModal() {
     const modal = document.getElementById('authModal');
     if (modal) {
-        modal.style.display = 'flex';  // Changed from just setting display
+        modal.style.display = 'flex';
     }
 }
 
@@ -1545,13 +1554,10 @@ function showAuthError(message) {
     if (errorDiv) {
         errorDiv.textContent = message;
         errorDiv.style.display = 'block';
-        setTimeout(() => {
-            errorDiv.style.display = 'none';
-        }, 5000);
+        setTimeout(() => errorDiv.style.display = 'none', 5000);
     }
 }
 
-// Sign in with email/password
 async function signInWithEmail() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
@@ -1563,13 +1569,13 @@ async function signInWithEmail() {
 
     try {
         await window.firebaseSignInWithEmailAndPassword(window.firebaseAuth, email, password);
+        // Auth state listener will handle the rest
     } catch (error) {
         console.error('Sign in error:', error);
         showAuthError(error.message || 'Failed to sign in');
     }
 }
 
-// Sign up with email/password
 async function signUpWithEmail() {
     const email = document.getElementById('authEmail').value.trim();
     const password = document.getElementById('authPassword').value;
@@ -1586,93 +1592,54 @@ async function signUpWithEmail() {
 
     try {
         await window.firebaseCreateUserWithEmailAndPassword(window.firebaseAuth, email, password);
+        // Auth state listener will handle the rest
     } catch (error) {
         console.error('Sign up error:', error);
         showAuthError(error.message || 'Failed to create account');
     }
 }
 
-// Sign in with Google - USE REDIRECT (more reliable)
 async function signInWithGoogle() {
     const provider = new window.firebaseGoogleAuthProvider();
 
     try {
-        // Import redirect function
-        const auth = window.firebaseAuth;
-
-        // Use signInWithRedirect - this works better on desktop
-        const { signInWithRedirect } = await import('https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js');
-
-        console.log('Starting Google sign-in redirect...');
-        await signInWithRedirect(auth, provider);
-
-        // Page will redirect away, then come back after sign-in
+        await window.firebaseSignInWithPopup(window.firebaseAuth, provider);
+        // Auth state listener will handle the rest
     } catch (error) {
         console.error('Google sign in error:', error);
         showAuthError(error.message || 'Failed to sign in with Google');
     }
 }
 
-// Handle redirect result when user comes back from Google sign-in
-async function checkRedirectResult() {
-    try {
-        const { getRedirectResult } = await import(
-            'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js'
-            );
-
-        const result = await getRedirectResult(window.firebaseAuth);
-
-        if (result?.user) {
-            console.log('Google sign-in successful:', result.user.email);
-        }
-    } catch (error) {
-        if (error.code !== 'auth/popup-closed-by-user') {
-            console.error('Redirect result error:', error);
-        }
-    }
-}
-
-
-// Continue without signing in
 function continueWithoutLogin() {
     localStorage.setItem('skipLogin', 'true');
     isGuestMode = true;
     hideAuthModal();
 
-    // Show sign-in button for guest users
     const signInButton = document.getElementById('signInButton');
-    if (signInButton) {
-        signInButton.style.display = 'block';
-    }
+    if (signInButton) signInButton.style.display = 'block';
 }
 
-// Show auth modal again (for guest users who change their mind)
 function showAuthModalAgain() {
     localStorage.removeItem('skipLogin');
     isGuestMode = false;
 
-    // Hide sign-in button
     const signInButton = document.getElementById('signInButton');
-    if (signInButton) {
-        signInButton.style.display = 'none';
-    }
+    if (signInButton) signInButton.style.display = 'none';
 
     showAuthModal();
 }
 
-// Sign out
 async function signOutUser() {
     try {
         await window.firebaseSignOut(window.firebaseAuth);
         localStorage.removeItem('skipLogin');
         isGuestMode = false;
 
-        // Clear local data
         classes = [];
         localStorage.removeItem('classes');
         render();
 
-        // Show auth modal again
         showAuthModal();
         closeUserMenu();
     } catch (error) {
@@ -1681,30 +1648,8 @@ async function signOutUser() {
     }
 }
 
-// When user signs in successfully
-function onUserSignedIn(user) {
-    console.log('User signed in:', user.email);
-
-    // Set flag
-    isGuestMode = false;
-
-    // Hide modal and sign-in button
-    hideAuthModal();
-    const signInButton = document.getElementById('signInButton');
-    if (signInButton) signInButton.style.display = 'none';
-
-    // Show user button
-    const userButton = document.getElementById('userButton');
-    if (userButton) userButton.style.display = 'block';
-
-    // Load data (this runs async, won't block)
-    loadUserDataFromFirebase(user.uid);
-    setupRealtimeSync(user.uid);
-}
-
-// Load data from Firebase
 async function loadUserDataFromFirebase(userId) {
-    console.log('Loading data for user:', userId);
+    console.log('📥 Loading data for user:', userId);
 
     try {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
@@ -1715,10 +1660,8 @@ async function loadUserDataFromFirebase(userId) {
             const localData = JSON.parse(localStorage.getItem('classes') || '[]');
 
             if (localData.length === 0) {
-                // No local data, use cloud data
                 classes = firebaseData;
             } else {
-                // Only ask ONCE per session
                 const asked = sessionStorage.getItem('mergeAsked');
 
                 if (!asked) {
@@ -1730,14 +1673,9 @@ async function loadUserDataFromFirebase(userId) {
                         'Cancel = Keep local data and sync to cloud'
                     );
 
-                    if (useCloud) {
-                        classes = firebaseData;
-                    } else {
-                        classes = localData;
-                        saveToFirebase(userId);
-                    }
+                    classes = useCloud ? firebaseData : localData;
+                    if (!useCloud) saveToFirebase(userId);
                 } else {
-                    // Already asked, use local
                     classes = localData;
                 }
             }
@@ -1745,7 +1683,6 @@ async function loadUserDataFromFirebase(userId) {
             localStorage.setItem('classes', JSON.stringify(classes));
             render();
         } else {
-            // No cloud data, upload local if exists
             const localData = JSON.parse(localStorage.getItem('classes') || '[]');
             if (localData.length > 0) {
                 classes = localData;
@@ -1760,7 +1697,6 @@ async function loadUserDataFromFirebase(userId) {
     }
 }
 
-// Save data to Firebase
 function saveToFirebase(userId) {
     if (!userId || isGuestMode) return;
 
@@ -1768,11 +1704,10 @@ function saveToFirebase(userId) {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
         window.firebaseSet(userDataRef, classes);
     } catch (error) {
-        console.error('Error saving to Firebase:', error);
+        console.error('Save error:', error);
     }
 }
 
-// Set up real-time sync
 function setupRealtimeSync(userId) {
     const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
 
@@ -1780,7 +1715,6 @@ function setupRealtimeSync(userId) {
         if (snapshot.exists()) {
             const firebaseData = snapshot.val();
 
-            // Only update if data is different (prevent infinite loop)
             if (JSON.stringify(firebaseData) !== JSON.stringify(classes)) {
                 classes = firebaseData;
                 localStorage.setItem('classes', JSON.stringify(classes));
@@ -1790,7 +1724,6 @@ function setupRealtimeSync(userId) {
     });
 }
 
-// Override save function to also save to Firebase
 const originalSave = save;
 save = function() {
     originalSave();
@@ -1799,7 +1732,6 @@ save = function() {
     }
 };
 
-// Show user menu
 function showUserMenu() {
     const email = currentUser?.email || 'Guest';
     const menuHTML = `
@@ -1816,7 +1748,6 @@ function showUserMenu() {
 
     document.body.insertAdjacentHTML('beforeend', menuHTML);
 
-    // Close menu when clicking outside
     setTimeout(() => {
         document.addEventListener('click', closeUserMenu);
     }, 100);
@@ -1830,4 +1761,15 @@ function closeUserMenu() {
     }
 }
 
-initializeAuth();
+// Initialize auth when script loads
+if (window.firebaseReady) {
+    initializeAuth();
+} else {
+    // Wait for Firebase to load
+    const checkFirebase = setInterval(() => {
+        if (window.firebaseReady) {
+            clearInterval(checkFirebase);
+            initializeAuth();
+        }
+    }, 100);
+}
