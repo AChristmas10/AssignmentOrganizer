@@ -376,6 +376,13 @@ function toggleClass(classIndex) {
 // RENDER
 function render() {
     classesContainer.innerHTML = "";
+    classes = classes.map(cls => ({
+        ...cls,
+        assignments: cls.assignments || [],
+        tests: cls.tests || [],
+        color: cls.color || '#6366f1',
+        isOpen: cls.isOpen !== undefined ? cls.isOpen : false
+    }));
     classes.forEach((cls, classIndex) => {
         const classDiv = document.createElement("div");
         classDiv.className = "class-card";
