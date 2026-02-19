@@ -1,9 +1,10 @@
-const CACHE_NAME = 'do2date-v1';
+const CACHE_NAME = 'do2date-v2';
 const urlsToCache = [
     '/',
     '/index.html',
     '/style.css',
     '/script.js',
+    '/games.js',
     'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap'
 ];
 
