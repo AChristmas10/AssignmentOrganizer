@@ -357,16 +357,88 @@ async function submitScore(gameType, score) {
     const timestamp = Date.now();
 
     try {
+        // Check if user already has a score for this game
         const leaderboardRef = window.firebaseRef(window.firebaseDatabase, `leaderboards/${gameType}/${currentUser.uid}`);
-        await window.firebaseSet(leaderboardRef, {
-            username: username,
-            score: score,
-            timestamp: timestamp
-        });
+        const snapshot = await window.firebaseGet(leaderboardRef);
 
-        console.log('✅ Score submitted to leaderboard');
-        closeGame();
-        showLeaderboard(gameType);
+        let shouldSubmit = true;
+        let isNewBest = true;
+
+        if (snapshot.exists()) {
+            const existingScore = snapshot.val().score;
+
+            // For time-based games (lower is better)
+            const timeBased = ['oddEmoji', 'reaction'].includes(gameType);
+
+            if (timeBased) {
+                // Lower is better - only submit if new score is lower
+                if (score >= existingScore) {
+                    shouldSubmit = false;
+                    isNewBest = false;
+                }
+            } else {
+                // Higher is better - only submit if new score is higher
+                if (score <= existingScore) {
+                    shouldSubmit = false;
+                    isNewBest = false;
+                }
+            }
+        }
+
+        if (shouldSubmit) {
+            await window.firebaseSet(leaderboardRef, {
+                username: username,
+                score: score,
+                timestamp: timestamp
+            });
+
+            console.log('✅ New personal best submitted to leaderboard!');
+            closeGame();
+
+            // Show success message
+            const successHTML = `
+                <div id="gameContainer" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;">
+                    <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:100%; box-shadow:var(--shadow-lg); text-align:center;">
+                        <div style="font-size:3rem; margin-bottom:16px;">🎉</div>
+                        <h2 style="margin:0 0 12px 0; color:var(--text-primary);">Personal Best!</h2>
+                        <p style="color:var(--text-secondary); margin-bottom:24px;">Your score has been submitted to the leaderboard!</p>
+                        <button onclick="closeGame(); showLeaderboard('${gameType}');" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; margin-bottom:8px;">
+                            View Leaderboard 🏆
+                        </button>
+                        <button onclick="closeGame(); showGamesMenu();" style="width:100%; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
+                            Back to Menu
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.getElementById('gameContainer').remove();
+            document.body.insertAdjacentHTML('beforeend', successHTML);
+        } else {
+            console.log('⏭️ Score not submitted - not better than personal best');
+            closeGame();
+
+            // Show "not your best" message
+            const notBestHTML = `
+                <div id="gameContainer" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;">
+                    <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:100%; box-shadow:var(--shadow-lg); text-align:center;">
+                        <div style="font-size:3rem; margin-bottom:16px;">📊</div>
+                        <h2 style="margin:0 0 12px 0; color:var(--text-primary);">Not Your Best</h2>
+                        <p style="color:var(--text-secondary); margin-bottom:8px;">You've done better before!</p>
+                        <p style="color:var(--text-primary); font-weight:600; margin-bottom:24px;">Keep trying to beat your personal best!</p>
+                        <div style="display:flex; gap:8px;">
+                            <button onclick="startGame('${gameType}')" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">
+                                Try Again
+                            </button>
+                            <button onclick="closeGame(); showGamesMenu();" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
+                                Menu
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('gameContainer').remove();
+            document.body.insertAdjacentHTML('beforeend', notBestHTML);
+        }
     } catch (error) {
         console.error('❌ Error submitting score:', error);
         console.error('Error details:', error.code, error.message);
