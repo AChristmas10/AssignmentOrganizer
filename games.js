@@ -369,7 +369,8 @@ async function submitScore(gameType, score) {
         showLeaderboard(gameType);
     } catch (error) {
         console.error('❌ Error submitting score:', error);
-        alert('Failed to submit score. Please try again.');
+        console.error('Error details:', error.code, error.message);
+        alert('Failed to submit score: ' + error.message + '\n\nMake sure Firebase database rules are updated!');
     }
 }
 
@@ -469,9 +470,10 @@ async function showLeaderboard(gameType) {
         document.body.insertAdjacentHTML('beforeend', leaderboardHTML);
 
     } catch (error) {
-        console.error('Error loading leaderboard:', error);
+        console.error('❌ Error loading leaderboard:', error);
+        console.error('Error details:', error.code, error.message);
         document.getElementById('leaderboardModal').remove();
-        alert('Failed to load leaderboard');
+        alert('Failed to load leaderboard: ' + error.message + '\n\nMake sure Firebase database rules are updated!');
     }
 }
 
@@ -487,7 +489,7 @@ function startCubeRunnerGame() {
     let score = 0;
     let isJumping = false;
     let isDucking = false;
-    let gameSpeed = 5;
+    let gameSpeed = 8; // Increased from 5 to 8
     let gameLoop;
     let obstacleInterval;
     let obstacles = [];
@@ -635,9 +637,9 @@ function startCubeRunnerGame() {
                 score++;
                 document.getElementById('cubeScore').textContent = score;
 
-                // Increase speed every 10 points
-                if (score % 10 === 0) {
-                    gameSpeed += 0.5;
+                // Increase speed every 5 points (was 10)
+                if (score % 5 === 0) {
+                    gameSpeed += 0.8; // Increased from 0.5
                 }
             }
         }
@@ -669,7 +671,7 @@ function startCubeRunnerGame() {
     });
 
     // Start game
-    obstacleInterval = setInterval(createObstacle, 2000);
+    obstacleInterval = setInterval(createObstacle, 1400); // Decreased from 2000ms to 1400ms
     update();
 }
 
@@ -721,10 +723,10 @@ function startTowerGame() {
         if (!gameRunning) return;
 
         const lastBlock = blocks[blocks.length - 1];
-        const newWidth = Math.max(30, lastBlock.width - 5); // Get narrower
+        const newWidth = lastBlock.width; // Use same width as last successful block
 
         currentBlock = {
-            x: 0,
+            x: Math.random() * (canvas.width - newWidth), // Random start position
             y: lastBlock.y - 35,
             width: newWidth,
             height: 30,
