@@ -59,6 +59,7 @@
     <div style="display:flex; gap:12px; align-items:center;">
         <button id="signInButton" class="dark-mode-toggle" onclick="showAuthModalAgain()" title="Sign in to sync data" style="font-size:1rem; padding:8px 16px; display:none; background:var(--primary); color:white; border-radius:8px; white-space:nowrap;">Sign In</button>
         <button id="userButton" class="dark-mode-toggle" onclick="showUserMenu()" title="Account" style="font-size:1.2rem; display:none;">👤</button>
+        <button id="gamesButton" class="dark-mode-toggle" onclick="showGamesMenu()" title="Mini Games" style="font-size:1.2rem;">🎮</button>
         <button id="exportButton" class="dark-mode-toggle" onclick="showExportMenu()" title="Export data" style="font-size:1.2rem;">📤</button>
         <button id="notificationToggle" class="dark-mode-toggle" onclick="toggleNotifications()" title="Toggle notifications" style="font-size:1.2rem;">🔔</button>
         <button id="darkModeToggle" class="dark-mode-toggle" onclick="toggleDarkMode()" title="Toggle dark mode">🌙</button>
@@ -119,7 +120,8 @@
     </div>
 </div>
 
-<script src="script.js?v=32"></script>
+<script src="script.js?v=33"></script>
+<script src="games.js"></script>
 
 <!-- Firebase SDK -->
 <script type="module">
