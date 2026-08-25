@@ -23,32 +23,32 @@ import { firebaseAdmin, verifyCaller } from "../_lib/firebase.js";
 import { claimQuotaSlot } from "../_lib/quota.js";
 import { extractPdfText, normalizeExtractedText } from "../_lib/pdf.js";
 
-export const config = {
-  // We read the stream ourselves so we can enforce a byte cap before buffering.
-  api: { bodyParser: false },
-  maxDuration: 60, // a long syllabus comfortably exceeds the 10s default
-};
-
-/** Hard ceiling on the request body. base64 inflates a file by about a third. */
-const MAX_BODY_BYTES = Math.ceil(SYLLABUS_LIMITS.maxFileBytes * 1.4) + 64 * 1024;
+// NOTE: no `export const config` here. `{ api: { bodyParser: false } }` and a
+// `maxDuration` in that object are NEXT.JS conventions — this is a plain Vercel
+// Node function, where they are silently ignored. Function duration is set in
+// vercel.json instead, and Vercel parses the body for us: for an
+// application/json request it populates `req.body` with the parsed object.
+//
+// That means we cannot stream-cap the body ourselves. We do not need to:
+// Vercel rejects request bodies over 4.5 MB before the function is invoked, and
+// the decoded file size is checked below against SYLLABUS_LIMITS.maxFileBytes.
 
 function fail(res, status, code, message) {
   return res.status(status).json({ ok: false, code, error: message });
 }
 
-async function readBody(req) {
-  const chunks = [];
-  let total = 0;
-  for await (const chunk of req) {
-    total += chunk.length;
-    if (total > MAX_BODY_BYTES) {
-      const err = new Error("BODY_TOO_LARGE");
-      err.code = "BODY_TOO_LARGE";
-      throw err;
-    }
-    chunks.push(chunk);
-  }
-  return Buffer.concat(chunks).toString("utf8");
+/**
+ * Vercel gives us `req.body` already parsed for application/json. It is a
+ * getter that throws on malformed JSON, so it is read inside a try/catch. The
+ * string fallback covers a client that sends JSON under a different
+ * content-type, which would otherwise arrive as text.
+ */
+function readJsonBody(req) {
+  const body = req.body;
+  if (body === undefined || body === null) return null;
+  if (typeof body === "string") return JSON.parse(body);
+  if (Buffer.isBuffer(body)) return JSON.parse(body.toString("utf8"));
+  return body;
 }
 
 export default async function handler(req, res) {
@@ -91,20 +91,16 @@ export default async function handler(req, res) {
   // -------------------------------------------------------------------
   let body;
   try {
-    body = JSON.parse(await readBody(req));
-  } catch (error) {
-    if (error && error.code === "BODY_TOO_LARGE") {
-      return fail(
-        res,
-        413,
-        "FILE_TOO_LARGE",
-        "That file is too big. Upload a PDF under 3 MB, or paste the text instead."
-      );
-    }
+    body = readJsonBody(req);
+  } catch {
     return fail(res, 400, "BAD_REQUEST", "That request couldn't be read.");
   }
 
-  const mode = body && body.mode === "upload" ? "upload" : "paste";
+  if (!body) {
+    return fail(res, 400, "BAD_REQUEST", "That request couldn't be read.");
+  }
+
+  const mode = body.mode === "upload" ? "upload" : "paste";
 
   // -------------------------------------------------------------------
   // 3. Get the text. Extraction happens here, never in the browser.

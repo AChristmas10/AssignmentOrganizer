@@ -85,6 +85,11 @@ caller cannot edit. Both need admin credentials.
    | `FIREBASE_SERVICE_ACCOUNT` | the base64 string from step 1 |
    | `FIREBASE_DATABASE_URL` | `https://do2date-default-rtdb.firebaseio.com` |
 
+   Note: `vercel.json` deliberately contains **no comment keys**. Vercel
+   schema-validates that file against a fixed list of properties and fails the
+   build on anything unrecognised — including a `"//"` key, which is a common
+   JSON commenting trick. Explanations live in this file instead.
+
 4. Deploy. You get a `*.vercel.app` URL — **test the syllabus upload there
    before moving DNS.** If something is misconfigured, this is where you find
    out, while the live site is still untouched.
