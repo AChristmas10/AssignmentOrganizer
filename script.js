@@ -22,6 +22,161 @@ classes.forEach(cls => {
 
 let activeTab = []; // tracks active tab per class (0 = Assignments, 1 = Tests)
 
+// ---------------------------------------------------------------------------
+// TIME ZONE
+//
+// Every "is this overdue?" question in this app now takes an explicit IANA zone
+// instead of whatever the browser happens to report. The browser's zone is a
+// fine DEFAULT, and a terrible source of truth: it changes when a student flies
+// home for break, and every deadline silently shifts with it. Stored per user
+// so it follows them across devices, exactly like their classes do.
+// ---------------------------------------------------------------------------
+let userTimezone =
+    localStorage.getItem("timezone") || Do2DateDates.detectTimeZone();
+
+function getTimeZone() {
+    // Guard on read, not just on write. A junk value that reached storage some
+    // other way (an old build, a hand-edited Firebase record) would otherwise
+    // throw inside Intl on every single row and render a blank page.
+    return Do2DateDates.isValidTimeZone(userTimezone)
+        ? userTimezone
+        : Do2DateDates.detectTimeZone();
+}
+
+function setTimeZone(zone) {
+    if (!Do2DateDates.isValidTimeZone(zone)) return false;
+    userTimezone = zone;
+    localStorage.setItem("timezone", zone);
+    save();
+    render();
+    if (typeof renderAllItems === "function") renderAllItems();
+    if (typeof renderCalendar === "function") renderCalendar();
+    return true;
+}
+
+// ---------------------------------------------------------------------------
+// DISPLAY NAME
+//
+// The games leaderboard is world-readable — `leaderboards/$gameType` is
+// ".read": true, so anyone can fetch it over plain REST without an account.
+// It used to publish `currentUser.email.split('@')[0]`, which for a university
+// address is a real identifier next to a guessable domain. Students signed up
+// to sync their homework; nobody agreed to have a working email address
+// reconstructable from a Snake high score.
+//
+// So: a name the student chooses, defaulting to something anonymous, stored
+// under their own subtree where the existing rules already protect it.
+// ---------------------------------------------------------------------------
+let displayName = localStorage.getItem("displayName") || "";
+
+function defaultDisplayName() {
+    return "Student" + Math.floor(1000 + Math.random() * 9000);
+}
+
+/** Trim, cap at 20 chars to match the .validate rule, reject empty. */
+function normalizeDisplayName(value) {
+    const trimmed = String(value || "").trim().slice(0, 20);
+    return trimmed.length > 0 ? trimmed : null;
+}
+
+async function loadDisplayNameFromFirebase(userId) {
+    try {
+        const nameRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/displayName`);
+        const snapshot = await window.firebaseGet(nameRef);
+        if (snapshot.exists()) {
+            const stored = normalizeDisplayName(snapshot.val());
+            if (stored) {
+                displayName = stored;
+                localStorage.setItem("displayName", stored);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading display name:', error);
+    }
+}
+
+function saveDisplayName(name) {
+    const clean = normalizeDisplayName(name);
+    if (!clean) return null;
+    displayName = clean;
+    localStorage.setItem("displayName", clean);
+    if (currentUser && !isGuestMode) {
+        try {
+            const nameRef = window.firebaseRef(window.firebaseDatabase, `users/${currentUser.uid}/displayName`);
+            window.firebaseSet(nameRef, clean);
+        } catch (error) {
+            console.error('❌ Error saving display name:', error);
+        }
+    }
+    return clean;
+}
+
+/**
+ * Resolves to the name to publish, or null if the student backed out.
+ *
+ * Asked once, at the moment it first matters — the first score submission —
+ * rather than bolted onto sign-up, where it would be one more field between a
+ * student and the thing they came for. The pre-filled default is anonymous, so
+ * hitting Save without reading is the safe outcome rather than the leaky one.
+ */
+function ensureDisplayName() {
+    if (displayName) return Promise.resolve(displayName);
+
+    return new Promise((resolve) => {
+        const suggestion = defaultDisplayName();
+        const modalHTML = `
+            <div id="displayNameModal" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.8); z-index:3000; display:flex; align-items:center; justify-content:center; padding:20px;">
+                <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:100%; box-shadow:var(--shadow-lg);">
+                    <h2 style="margin:0 0 8px 0; color:var(--text-primary); text-align:center;">Pick a leaderboard name</h2>
+                    <p style="text-align:center; color:var(--text-secondary); margin:0 0 20px 0; font-size:0.9em;">
+                        This is public — anyone can see the leaderboard. Your email is never shown.
+                    </p>
+                    <input id="displayNameInput" maxlength="20" value="${suggestion}"
+                           style="width:100%; padding:12px; margin-bottom:16px; border:2px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary); min-height:44px;">
+                    <button id="displayNameSave" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; margin-bottom:8px; min-height:44px;">Save and submit score</button>
+                    <button id="displayNameCancel" style="width:100%; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer; min-height:44px;">Don't post my score</button>
+                </div>
+            </div>
+        `;
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const close = (value) => {
+            const modal = document.getElementById('displayNameModal');
+            if (modal) modal.remove();
+            resolve(value);
+        };
+
+        const input = document.getElementById('displayNameInput');
+        input.focus();
+        input.select();
+
+        document.getElementById('displayNameSave').addEventListener('click', () => {
+            // Falling back to the suggestion rather than nagging: an empty box
+            // should not trap someone in a dialog they did not ask for.
+            close(saveDisplayName(input.value) || saveDisplayName(suggestion));
+        });
+        document.getElementById('displayNameCancel').addEventListener('click', () => close(null));
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('displayNameSave').click();
+            if (e.key === 'Escape') close(null);
+        });
+    });
+}
+
+/**
+ * HTML-escape. Anything that reaches innerHTML and did not come from this
+ * codebase goes through here — leaderboard names above all, since those are
+ * written by other users and rendered in everyone else's browser.
+ */
+function escapeHtml(value) {
+    return String(value === null || value === undefined ? "" : value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
+
 // ELEMENTS
 const addClassBtn = document.getElementById("addClassBtn");
 const classInput = document.getElementById("classInput");
@@ -33,47 +188,28 @@ function save() {
 }
 
 // HELPER: due-in text
-function dueInText(dueDateStr) {
-    const today = new Date();
-    // Parse date as local time, not UTC
-    const [year, month, day] = dueDateStr.split('-').map(Number);
-    const dueDate = new Date(year, month - 1, day);
+//
+// Same wording students already see. The difference is that the comparison now
+// happens against getTimeZone() rather than the browser's implicit zone, and
+// that an item with a real time on it goes "Past due" once that time passes
+// instead of holding at "Due today" until midnight. See dates.js.
+function dueInText(item) {
+    return Do2DateDates.dueInText(item, getTimeZone());
+}
 
-    today.setHours(0,0,0,0);
-    dueDate.setHours(0,0,0,0);
-
-    const diffTime = dueDate - today;
-    const diffDays = Math.round(diffTime / (1000*60*60*24));
-
-    if (diffDays < 0) return "Past due";
-    if (diffDays === 0) return "Due today";
-    if (diffDays === 1) return "Due tomorrow";
-    if (diffDays < 7) return `Due in ${diffDays} day${diffDays>1?"s":""}`;
-
-    const weeks = Math.floor(diffDays/7);
-    const days = diffDays % 7;
-    let text = `Due in ${weeks} week${weeks>1?"s":""}`;
-    if (days>0) text += ` and ${days} day${days>1?"s":""}`;
-    return text;
+// HELPER: urgency bucket, for the colour + label pairing below.
+function dueBucketOf(item) {
+    return Do2DateDates.dueBucket(item, getTimeZone());
 }
 
 // HELPER: format MM/DD
 function formatDate(dueDateStr) {
-    // Parse date as local time, not UTC
-    const [year, month, day] = dueDateStr.split('-').map(Number);
-    const d = new Date(year, month - 1, day);
-    const mm = String(d.getMonth()+1).padStart(2,'0');
-    const dd = String(d.getDate()).padStart(2,'0');
-    return `${mm}/${dd}`;
+    return Do2DateDates.formatDateShort(dueDateStr);
 }
 
 // HELPER: format time (24hr to 12hr)
 function formatTime(timeStr) {
-    if (!timeStr) return '';
-    const [hours, minutes] = timeStr.split(':').map(Number);
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours % 12 || 12;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    return Do2DateDates.formatTime(timeStr);
 }
 
 // ADD CLASS
@@ -149,13 +285,19 @@ function addAssignment(classIndex){
         const occurrences = parseInt(occurrencesInput.value);
         const interval = frequency === 'weekly' ? 7 : 14; // days
 
-        const baseDate = new Date(dueInput.value);
-
+        // THE BUG THIS REPLACES: the old code did
+        //   new Date("2026-03-05")     -> UTC midnight
+        //   .setDate(getDate() + 7)    -> LOCAL time arithmetic
+        //   .toISOString().slice(0,10) -> read back as UTC
+        // Parse in one calendar, add in another, read back in the first. Those
+        // cancel out until a DST boundary lands inside the series, and then
+        // every occurrence after it is a day early — permanently. A weekly
+        // assignment starting 2026-03-05 produced Mar 11, 18, 25 instead of
+        // Mar 12, 19, 26. addCalendarDays does the arithmetic in UTC, where
+        // every day is 24 hours. Covered by dates.test.js.
         for (let i = 0; i < occurrences; i++) {
-            const currentDate = new Date(baseDate);
-            currentDate.setDate(currentDate.getDate() + (i * interval));
-
-            const dateStr = currentDate.toISOString().split('T')[0];
+            const dateStr = Do2DateDates.addCalendarDays(dueInput.value, i * interval);
+            if (!dateStr) continue; // malformed input; refuse rather than store junk
             const assignmentNumber = occurrences > 1 ? ` #${i + 1}` : '';
 
             classes[classIndex].assignments.push({
@@ -467,7 +609,7 @@ function render() {
                     <div>
                         <strong title="${a.name}">${displayAssignmentName}</strong>
                         <span style="font-size:0.85em; color:#555; margin-left:8px;">
-                            ${formatDate(a.due)}${timeDisplay ? ' at ' + timeDisplay : ''} (${dueInText(a.due)})
+                            ${formatDate(a.due)}${timeDisplay ? ' at ' + timeDisplay : ''} (<span style="color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(a)]};">${dueInText(a)}</span>)
                         </span>
                     </div>
                 </div>
@@ -497,7 +639,7 @@ function render() {
                     <div>
                         <strong title="${t.name}">${displayTestName}</strong>
                         <span style="font-size:0.85em; color:#555; margin-left:8px;">
-                            ${formatDate(t.date)} (${dueInText(t.date)})
+                            ${formatDate(t.date)} (<span style="color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(t)]};">${dueInText(t)}</span>)
                         </span>
                     </div>
                 </div>
@@ -515,6 +657,8 @@ function render() {
             </div>
         `;
         }).join('')}
+
+            ${Do2DateSyllabus.sectionHtml(classIndex, cls)}
 
             <div style="margin-top:15px; text-align:right;">
                 <button onclick="removeClass(${classIndex})" style="background:#ccc; color:#000; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">
@@ -656,7 +800,7 @@ function renderAllItems() {
                                 </span>
                             </div>
                             <span style="font-size:0.85em; color:var(--text-secondary); margin-top: 4px; display: block;">
-                                ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''} (${dueInText(item.date)})
+                                ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''} (<span style="color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(item)]};">${dueInText(item)}</span>)
                             </span>
                         </div>
                     </div>
@@ -1239,9 +1383,18 @@ function toggleDarkMode() {
 let deferredPrompt;
 
 // Register service worker
+//
+// This said '/service-worker.js' with hyphens. The file on disk is
+// service_worker.js with an underscore, and has been since it was added — so
+// registration 404'd on every load and the service worker never once ran. The
+// PWA has had no offline support at all, and the run of commits titled "Fixed
+// Service Worker" were fixing a file the browser was never fetching.
+//
+// If you rename the file, change this string in the same commit. A typo here
+// fails silently in the console and nowhere a user would notice.
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        navigator.serviceWorker.register('/service_worker.js')
             .then(registration => {
                 console.log('Service Worker registered successfully:', registration.scope);
             })
@@ -1382,54 +1535,39 @@ function showTestNotification() {
 function checkUpcomingDeadlines() {
     if (Notification.permission !== 'granted') return;
 
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
-
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const nextWeek = new Date(now);
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
+    // THE BUG THIS REPLACES, and it fired every day of the year, not just at
+    // DST. The old code did:
+    //
+    //     const dueDate = new Date(assignment.due);  // "2026-09-04" -> 00:00 UTC
+    //     dueDate.setHours(0, 0, 0, 0);              // -> local midnight of SEP 3
+    //
+    // In any timezone behind UTC, "2026-09-04" parses to 8pm on September 3
+    // local, and setHours then floors it to September 3. So every deadline was
+    // compared as if it were a day earlier than it is: the "Due Today" push
+    // arrived a day EARLY, and on the actual due date the item had already
+    // slipped into the past and produced no notification at all.
+    //
+    // dueBucket does the whole comparison in the student's zone. See dates.js.
+    const timeZone = getTimeZone();
     let dueTodayCount = 0;
     let dueTomorrowCount = 0;
     let dueThisWeekCount = 0;
 
     classes.forEach(cls => {
-        cls.assignments.forEach(assignment => {
-            if (assignment.progress >= 10) return; // Skip completed
-
-            const dueDate = new Date(assignment.due);
-            dueDate.setHours(0, 0, 0, 0);
-
-            if (dueDate.getTime() === now.getTime()) {
-                dueTodayCount++;
-            } else if (dueDate.getTime() === tomorrow.getTime()) {
-                dueTomorrowCount++;
-            } else if (dueDate >= now && dueDate <= nextWeek) {
-                dueThisWeekCount++;
-            }
-        });
-
-        cls.tests.forEach(test => {
-            if (test.prepared >= 10) return; // Skip if ready
-
-            const testDate = new Date(test.date);
-            testDate.setHours(0, 0, 0, 0);
-
-            if (testDate.getTime() === now.getTime()) {
-                dueTodayCount++;
-            } else if (testDate.getTime() === tomorrow.getTime()) {
-                dueTomorrowCount++;
-            } else if (testDate >= now && testDate <= nextWeek) {
-                dueThisWeekCount++;
-            }
+        (cls.assignments || []).concat(cls.tests || []).forEach(item => {
+            const bucket = Do2DateDates.dueBucket(item, timeZone);
+            if (bucket === 'today') dueTodayCount++;
+            else if (bucket === 'tomorrow') dueTomorrowCount++;
+            else if (bucket === 'this_week') dueThisWeekCount++;
         });
     });
 
     // Send notifications based on what's due
     const lastNotificationDate = localStorage.getItem('lastNotificationDate');
-    const todayString = now.toISOString().split('T')[0];
+    // Also zone-explicit. The old version called toISOString() on a local
+    // midnight, which in Europe reports YESTERDAY's date — so the once-a-day
+    // guard let the summary fire twice.
+    const todayString = Do2DateDates.todayInZone(timeZone);
 
     // Only send daily summary once per day
     if (lastNotificationDate !== todayString) {
@@ -1677,6 +1815,8 @@ async function signOutUser() {
         // Clear local data
         classes = [];
         localStorage.removeItem('classes');
+        localStorage.removeItem('displayName');
+        displayName = '';
         render();
 
         console.log('✅ Signed out successfully');
@@ -1691,6 +1831,11 @@ async function signOutUser() {
 // LOAD DATA FROM FIREBASE
 async function loadUserDataFromFirebase(userId) {
     console.log('📥 Loading data from Firebase for user:', userId);
+
+    // Before the classes, so the first render already uses the right zone
+    // rather than painting every due date twice.
+    await loadTimezoneFromFirebase(userId);
+    await loadDisplayNameFromFirebase(userId);
 
     try {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
@@ -1769,9 +1914,41 @@ function saveToFirebase(userId) {
     try {
         const userDataRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/classes`);
         window.firebaseSet(userDataRef, classes);
+
+        // Stored next to the classes so it follows the student across devices.
+        // A phone and a laptop in the same bag should not disagree about
+        // whether an assignment is late.
+        const tzRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/timezone`);
+        window.firebaseSet(tzRef, getTimeZone());
+
         console.log('☁️ Saved to Firebase');
     } catch (error) {
         console.error('❌ Error saving to Firebase:', error);
+    }
+}
+
+/**
+ * Pull the saved zone down at sign-in.
+ *
+ * The browser's zone wins only when nothing is stored yet. Otherwise a student
+ * who set "America/New_York" and then opened the app from a hotel in Berlin
+ * would have it silently overwritten — which is the exact failure the setting
+ * exists to prevent.
+ */
+async function loadTimezoneFromFirebase(userId) {
+    try {
+        const tzRef = window.firebaseRef(window.firebaseDatabase, `users/${userId}/timezone`);
+        const snapshot = await window.firebaseGet(tzRef);
+        if (snapshot.exists()) {
+            const stored = snapshot.val();
+            if (Do2DateDates.isValidTimeZone(stored)) {
+                userTimezone = stored;
+                localStorage.setItem('timezone', stored);
+                console.log('🕐 Timezone from cloud:', stored);
+            }
+        }
+    } catch (error) {
+        console.error('❌ Error loading timezone:', error);
     }
 }
 
@@ -1811,6 +1988,38 @@ save = function() {
     }
 };
 
+/**
+ * Options for the time-zone picker.
+ *
+ * Intl.supportedValuesOf gives the full IANA list where it exists (every
+ * current browser); the short list is the fallback for older ones, not a
+ * curated "popular zones" menu — a student in Adelaide should not be told their
+ * zone is unavailable. The detected zone is always included, so whatever the
+ * device reports is selectable even if it is missing from the fallback.
+ */
+function timezoneOptions() {
+    const current = getTimeZone();
+    let zones;
+    try {
+        zones = Intl.supportedValuesOf('timeZone');
+    } catch (e) {
+        zones = [
+            'UTC', 'America/New_York', 'America/Chicago', 'America/Denver',
+            'America/Los_Angeles', 'America/Anchorage', 'Pacific/Honolulu',
+            'America/Toronto', 'America/Sao_Paulo', 'Europe/London',
+            'Europe/Berlin', 'Europe/Madrid', 'Europe/Athens', 'Africa/Lagos',
+            'Africa/Johannesburg', 'Asia/Dubai', 'Asia/Kolkata', 'Asia/Bangkok',
+            'Asia/Shanghai', 'Asia/Tokyo', 'Asia/Seoul', 'Australia/Perth',
+            'Australia/Adelaide', 'Australia/Sydney', 'Pacific/Auckland'
+        ];
+    }
+    if (zones.indexOf(current) === -1) zones = [current].concat(zones);
+
+    return zones.map(zone =>
+        `<option value="${zone}"${zone === current ? ' selected' : ''}>${zone.replace(/_/g, ' ')}</option>`
+    ).join('');
+}
+
 // SHOW USER MENU
 function showUserMenu() {
     const email = currentUser?.email || 'Guest';
@@ -1820,7 +2029,25 @@ function showUserMenu() {
                 <div style="font-size:0.85em; color:var(--text-secondary);">Signed in as</div>
                 <div style="font-weight:600; color:var(--text-primary); margin-top:4px; word-break:break-all;">${email}</div>
             </div>
-            <button onclick="signOutUser()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+            <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
+                <label for="nameInput" style="font-size:0.85em; color:var(--text-secondary); display:block; margin-bottom:6px;">Leaderboard name</label>
+                <input id="nameInput" maxlength="20" value="${escapeHtml(displayName)}" placeholder="Not set yet"
+                       onchange="saveDisplayName(this.value)"
+                       style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary); min-height:44px;">
+                <div style="font-size:0.75em; color:var(--text-secondary); margin-top:6px;">
+                    Public. Shown on game leaderboards — never your email.
+                </div>
+            </div>
+            <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
+                <label for="tzSelect" style="font-size:0.85em; color:var(--text-secondary); display:block; margin-bottom:6px;">Time zone</label>
+                <select id="tzSelect" onchange="setTimeZone(this.value)" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary); min-height:44px;">
+                    ${timezoneOptions()}
+                </select>
+                <div style="font-size:0.75em; color:var(--text-secondary); margin-top:6px;">
+                    Due dates are judged in this zone, not your device's.
+                </div>
+            </div>
+            <button onclick="signOutUser()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px; min-height:44px;">
                 <span>🚪</span> Sign Out
             </button>
         </div>

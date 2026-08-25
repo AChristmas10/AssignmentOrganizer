@@ -353,7 +353,21 @@ async function submitScore(gameType, score) {
         return;
     }
 
-    const username = currentUser.email.split('@')[0]; // Email before @
+    // WAS: currentUser.email.split('@')[0]
+    //
+    // That published an email-derived identifier to a world-readable path. For
+    // a university address the local part is a real name and the domain is
+    // guessable, so the leaderboard handed out working email addresses for
+    // every student who ever played a game. ensureDisplayName() asks once and
+    // defaults to something anonymous; see script.js.
+    const username = await ensureDisplayName();
+    if (!username) {
+        // Student chose not to post. Close the game quietly rather than
+        // treating a deliberate choice as an error.
+        closeGame();
+        showGamesMenu();
+        return;
+    }
     const timestamp = Date.now();
 
     try {
@@ -518,7 +532,7 @@ async function showLeaderboard(gameType) {
                                         ${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`}
                                     </div>
                                     <div style="flex:1;">
-                                        <div style="font-weight:600; color:var(--text-primary);">${s.username}</div>
+                                        <div style="font-weight:600; color:var(--text-primary);">${escapeHtml(s.username)}</div>
                                         <div style="font-size:0.85em; color:var(--text-secondary);">
                                             ${new Date(s.timestamp).toLocaleDateString()}
                                         </div>

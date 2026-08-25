@@ -1,0 +1,21 @@
+{
+  "name": "do2date",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Do2Date \u2014 student assignment, test, and syllabus tracker",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@google/genai": "^2.18.0",
+    "firebase-admin": "^14.3.0",
+    "unpdf": "^1.8.1",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.11"
+  }
+}

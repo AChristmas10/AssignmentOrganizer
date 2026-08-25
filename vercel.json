@@ -1,0 +1,56 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+
+  "//": [
+    "Do2Date is a static site plus one serverless function. There is no build",
+    "step and no framework — the HTML, CSS and JS in the repo root are served",
+    "as-is, exactly as GitHub Pages served them, so nothing about how the site",
+    "looks or behaves changes with the move. What Vercel adds is api/, which is",
+    "where GEMINI_API_KEY can live without shipping to the browser.",
+    "",
+    "Required environment variables (Project Settings -> Environment Variables):",
+    "  GEMINI_API_KEY           - from aistudio.google.com/apikey",
+    "  FIREBASE_SERVICE_ACCOUNT - the service-account JSON, base64-encoded",
+    "  FIREBASE_DATABASE_URL    - https://do2date-default-rtdb.firebaseio.com"
+  ],
+
+  "framework": null,
+  "buildCommand": null,
+  "outputDirectory": ".",
+
+  "functions": {
+    "api/syllabus/parse.js": {
+      "maxDuration": 60
+    }
+  },
+
+  "headers": [
+    {
+      "//": [
+        "The old service worker cached index.html indefinitely, which is why",
+        "shipping a change meant bumping ?v=NN by hand and hoping. Telling the",
+        "browser not to store the HTML shell means a deploy actually reaches",
+        "people. The hashed-forever pattern does not apply here: these files",
+        "have stable names, so they must revalidate."
+      ],
+      "source": "/",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/index.html",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/service_worker.js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/(script|games|dates|syllabus).js",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    },
+    {
+      "source": "/style.css",
+      "headers": [{ "key": "Cache-Control", "value": "no-cache, must-revalidate" }]
+    }
+  ]
+}

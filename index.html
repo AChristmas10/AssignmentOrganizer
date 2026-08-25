@@ -6,13 +6,13 @@
 
     <!-- SEO Meta Tags -->
     <title>Do2Date - Free Student Assignment & Test Tracker</title>
-    <meta name="description" content="Free online assignment organizer for students. Track homework, assignments, tests, and due dates. Simple, easy-to-use student planner that saves your progress.">
-    <meta name="keywords" content="assignment tracker, student planner, homework organizer, test tracker, due date tracker, student assignment planner, free student organizer">
+    <meta name="description" content="Free online assignment organizer for students. Upload your syllabus and Do2Date pulls out every due date and policy automatically. Track homework, assignments, tests, and due dates in one place.">
+    <meta name="keywords" content="assignment tracker, student planner, homework organizer, test tracker, due date tracker, syllabus parser, syllabus to calendar, student assignment planner, free student organizer">
     <meta name="author" content="Do2Date">
 
     <!-- Open Graph (for social media sharing) -->
     <meta property="og:title" content="Do2Date - Free Student Assignment Tracker">
-    <meta property="og:description" content="Track your assignments, tests, and due dates all in one place. Free student planner that saves your progress.">
+    <meta property="og:description" content="Upload your syllabus, get every due date and policy automatically. Free student planner that tracks assignments, tests, and deadlines.">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://do2date.com">
 
@@ -120,8 +120,13 @@
     </div>
 </div>
 
-<script src="script.js?v=37"></script>
-<script src="games.js"></script>
+<!-- dates.js must load before script.js: script.js reads Do2DateDates at parse
+     time. syllabus.js must also precede it, because script.js calls render()
+     as soon as it loads and render() now asks Do2DateSyllabus for its section. -->
+<script src="dates.js?v=38"></script>
+<script src="syllabus.js?v=38"></script>
+<script src="script.js?v=38"></script>
+<script src="games.js?v=38"></script>
 
 <!-- Firebase SDK -->
 <script type="module">

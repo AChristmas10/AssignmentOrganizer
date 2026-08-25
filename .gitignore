@@ -1,0 +1,13 @@
+node_modules/
+.idea/
+.vercel/
+.env
+.env.local
+*.log
+*.bak
+.DS_Store
+
+# Never commit the Firebase service-account JSON. Anyone holding it has full
+# read/write on the whole database, bypassing every security rule.
+*serviceAccount*.json
+firebase-adminsdk-*.json
