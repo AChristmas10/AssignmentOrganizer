@@ -325,32 +325,44 @@
   }
 
   /**
-   * The one function script.js calls. Returns the whole Syllabus block for a
-   * class card, collapsed by default so nothing about the existing layout moves
-   * for a student who never opens it.
+   * The button that sits in the class card's action row, beside
+   * "+ Add Assignment" and "+ Add Test".
+   *
+   * Deliberately a bare <button> with no inline styling, so it inherits the
+   * same rule from style.css those two use. Styling it here would mean this
+   * button quietly stops matching the day the stylesheet changes.
+   *
+   * The label switches once a syllabus exists: "+ Add Syllabus" is a lie at
+   * that point, and the count is more useful than the verb.
    */
-  function sectionHtml(classIndex, cls) {
+  function buttonHtml(classIndex, cls) {
     var syl = syllabusOf(cls);
-    var open = !!cls.syllabusOpen;
     var ready = syl && syl.status === "ready" && syl.data;
-
-    var summary = ready
-      ? (syl.data.key_dates || []).length + " dates found"
-      : "not added";
+    var label = ready
+      ? "📄 Syllabus (" + (syl.data.key_dates || []).length + " dates)"
+      : "+ Add Syllabus";
 
     return (
-      '<div style="margin-top:15px; border-top:1px solid var(--border); padding-top:12px;">' +
-      '<div onclick="Do2DateSyllabus.toggle(' + classIndex + ')" ' +
-      'style="display:flex; align-items:center; justify-content:space-between; cursor:pointer; min-height:44px;">' +
-      '<div style="display:flex; align-items:center; gap:8px;">' +
-      "<span>" + (open ? "▼" : "▶") + "</span>" +
-      '<strong style="color:var(--text-primary);">📄 Syllabus</strong>' +
-      "</div>" +
-      '<span style="font-size:0.85em; color:var(--text-secondary);">' + esc(summary) + "</span>" +
-      "</div>" +
-      '<div style="display:' + (open ? "block" : "none") + '; margin-top:10px;">' +
+      '<button onclick="Do2DateSyllabus.toggle(' + classIndex + ')">' +
+      esc(label) +
+      "</button>"
+    );
+  }
+
+  /**
+   * The panel the button opens. Rendered directly beneath the action row —
+   * the same place the Add Assignment and Add Test forms appear, so opening
+   * any of the three behaves identically.
+   */
+  function panelHtml(classIndex, cls) {
+    if (!cls.syllabusOpen) return "";
+    var syl = syllabusOf(cls);
+    var ready = syl && syl.status === "ready" && syl.data;
+
+    return (
+      '<div style="margin-bottom:10px; padding:12px; background:var(--bg-tertiary); border-radius:var(--radius-md);">' +
       (ready ? readyHtml(classIndex, cls) : uploadHtml(classIndex, cls)) +
-      "</div></div>"
+      "</div>"
     );
   }
 
@@ -578,7 +590,8 @@
   }
 
   window.Do2DateSyllabus = {
-    sectionHtml: sectionHtml,
+    buttonHtml: buttonHtml,
+    panelHtml: panelHtml,
     toggle: toggle,
     setTab: setTab,
     clearSyllabus: clearSyllabus,

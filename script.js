@@ -558,7 +558,11 @@ function render() {
             <div style="margin-bottom:10px; display:flex; gap:8px;">
                 <button onclick="toggleAddAssignment(${classIndex})" id="show-add-assignment-${classIndex}">+ Add Assignment</button>
                 <button onclick="toggleAddTest(${classIndex})" id="show-add-test-${classIndex}">+ Add Test</button>
+                ${Do2DateSyllabus.buttonHtml(classIndex, cls)}
             </div>
+
+            <!-- Syllabus panel, in the same position the two forms above use -->
+            ${Do2DateSyllabus.panelHtml(classIndex, cls)}
             
             <!-- Add Assignment Form (hidden by default) -->
             <div id="add-assignment-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:var(--bg-tertiary); border-radius:8px;">
@@ -657,8 +661,6 @@ function render() {
             </div>
         `;
         }).join('')}
-
-            ${Do2DateSyllabus.sectionHtml(classIndex, cls)}
 
             <div style="margin-top:15px; text-align:right;">
                 <button onclick="removeClass(${classIndex})" style="background:#ccc; color:#000; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">
