@@ -622,6 +622,13 @@ function render() {
             const completed = a.progress === 10;
             const displayAssignmentName = a.name.length > 30 ? a.name.slice(0,30) + "…" : a.name;
             const timeDisplay = a.time ? formatTime(a.time) : '';
+            // A finished item said "Done" in a badge AND "Due today" in the
+            // chip — two claims about the same thing, one of them irrelevant
+            // once the work is finished. The chip is the single answer now, so
+            // the badge below is gone. That also buys back a row of height on
+            // every completed item, which adds up in a thirty-item class.
+            const aBucket = dueBucketOf(a);
+            const aChip = completed ? 'Done' : dueInText(a);
             return `
             <div class="assignment ${completed ? 'completed' : ''}">
                 <div style="display:flex; justify-content: space-between; align-items:center;">
@@ -630,7 +637,7 @@ function render() {
                         <span style="font-size:0.85em; color:var(--text-secondary); margin-left:8px;">
                             ${formatDate(a.due)}${timeDisplay ? ' at ' + timeDisplay : ''}
                         </span>
-                        <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(a)]};">${dueInText(a)}</span>
+                        <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[aBucket]};">${aChip}</span>
                     </div>
                 </div>
                 <div>
@@ -639,9 +646,8 @@ function render() {
                            oninput="updateAssignmentProgress(${classIndex},${a.originalIndex},this.value)">
                     ${a.progress}/10
                 </div>
-                ${completed ? `<div class="completed-label">✔ Completed</div>` : ''}
                 <div style="margin-top:6px; display:flex; gap:8px;">
-                    <button onclick="editItem(${classIndex}, ${a.originalIndex}, 'assignment')">Edit</button>
+                    <button onclick="editItem(${classIndex}, ${a.originalIndex}, 'assignment')" class="btn-secondary">Edit</button>
                     <button onclick="removeAssignment(${classIndex},${a.originalIndex})">Remove</button>
                 </div>
             </div>
@@ -653,6 +659,8 @@ function render() {
             ${sortedTests.map((t) => {
             const ready = t.prepared === 10;
             const displayTestName = t.name.length > 30 ? t.name.slice(0,30) + "…" : t.name;
+            const tBucket = dueBucketOf(t);
+            const tChip = ready ? 'Ready' : dueInText(t);
             return `
             <div class="test ${ready ? 'completed' : ''}">
                 <div style="display:flex; justify-content: space-between; align-items:center;">
@@ -661,7 +669,7 @@ function render() {
                         <span style="font-size:0.85em; color:var(--text-secondary); margin-left:8px;">
                             ${formatDate(t.date)}
                         </span>
-                        <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(t)]};">${dueInText(t)}</span>
+                        <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[tBucket]};">${tChip}</span>
                     </div>
                 </div>
                 <div>
@@ -670,9 +678,8 @@ function render() {
                            oninput="updateTestPrepared(${classIndex},${t.originalIndex},this.value)">
                     ${t.prepared}/10
                 </div>
-                ${ready ? `<div class="completed-label">✔ Ready</div>` : ''}
                 <div style="margin-top:6px; display:flex; gap:8px;">
-                    <button onclick="editItem(${classIndex}, ${t.originalIndex}, 'test')">Edit</button>
+                    <button onclick="editItem(${classIndex}, ${t.originalIndex}, 'test')" class="btn-secondary">Edit</button>
                     <button onclick="removeTest(${classIndex},${t.originalIndex})">Remove</button>
                 </div>
             </div>
@@ -814,6 +821,8 @@ function renderAllItems() {
         const isAssignment = item.type === 'assignment';
         const completed = isAssignment ? item.progress === 10 : item.prepared === 10;
         const displayName = item.name.length > 40 ? item.name.slice(0,40) + "…" : item.name;
+        const itemBucket = dueBucketOf(item);
+        const itemChip = completed ? (isAssignment ? 'Done' : 'Ready') : dueInText(item);
 
         return `
                 <div class="${item.type} ${completed ? 'completed' : ''}" style="margin-bottom: 10px;">
@@ -828,7 +837,7 @@ function renderAllItems() {
                             </div>
                             <span style="font-size:0.85em; color:var(--text-secondary); margin-top: 4px; display: block;">
                                 ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''}
-                                <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(item)]};">${dueInText(item)}</span>
+                                <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[itemBucket]};">${itemChip}</span>
                             </span>
                         </div>
                     </div>
@@ -839,9 +848,8 @@ function renderAllItems() {
                                style="flex: 1;">
                         <span style="min-width: 40px;">${isAssignment ? item.progress : item.prepared}/10</span>
                     </div>
-                    ${completed ? `<div class="completed-label">✔ ${isAssignment ? 'Completed' : 'Ready'}</div>` : ''}
                     <div style="margin-top:8px; display:flex; gap:8px;">
-                        <button onclick="editItem(${item.classIndex}, ${item.itemIndex}, '${item.type}')" style="font-size:0.85em; padding:6px 12px;">Edit</button>
+                        <button onclick="editItem(${item.classIndex}, ${item.itemIndex}, '${item.type}')" class="btn-secondary" style="font-size:0.85em; padding:6px 12px;">Edit</button>
                         <button onclick="${isAssignment ? 'removeAssignment' : 'removeTest'}(${item.classIndex},${item.itemIndex}); renderAllItems();" class="btn-danger" style="font-size:0.85em; padding:6px 12px;">Remove</button>
                     </div>
                 </div>
