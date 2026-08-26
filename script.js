@@ -532,15 +532,29 @@ function render() {
         const uncompletedCount = cls.assignments.filter(a => a.progress < 10).length;
         const displayClassName = cls.name.length > 25 ? cls.name.slice(0,25) + "…" : cls.name;
 
-        // Sort assignments by due date
+        // Sort assignments: unfinished first, then by due date.
+        //
+        // Finished work sinking to the bottom is the whole point — with a
+        // syllabus imported, a class can carry thirty items, and the ones that
+        // still need doing are the only ones worth putting at eye level.
+        //
+        // Sorting by the date STRING rather than new Date(): "YYYY-MM-DD"
+        // compares correctly as text, and an item with a missing or malformed
+        // date sorts to the end instead of becoming NaN and scrambling the
+        // order around it.
+        const byDoneThenDate = (doneOf, dateOf) => (a, b) => {
+            const doneDiff = (doneOf(a) ? 1 : 0) - (doneOf(b) ? 1 : 0);
+            if (doneDiff !== 0) return doneDiff;
+            return String(dateOf(a) || '9999').localeCompare(String(dateOf(b) || '9999'));
+        };
+
         const sortedAssignments = [...cls.assignments]
             .map((a, idx) => ({...a, originalIndex: idx}))
-            .sort((a, b) => new Date(a.due) - new Date(b.due));
+            .sort(byDoneThenDate(a => a.progress === 10, a => a.due));
 
-        // Sort tests by date
         const sortedTests = [...cls.tests]
             .map((t, idx) => ({...t, originalIndex: idx}))
-            .sort((a, b) => new Date(a.date) - new Date(b.date));
+            .sort(byDoneThenDate(t => t.prepared === 10, t => t.date));
 
         classDiv.innerHTML = `
         <div class="class-header" onclick="toggleClass(${classIndex})" style="display:flex; justify-content:space-between; align-items:center;">
@@ -755,8 +769,16 @@ function renderAllItems() {
         allItems = allItems.filter(item => item.type === 'test');
     }
 
-    // Sort by date
-    allItems.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // Same rule as the class cards: finished work last, then by date.
+    // Keeping the two views consistent matters more than it sounds — an item
+    // that is third from the top in one place and buried in the other reads as
+    // a bug, even when both orders are individually defensible.
+    allItems.sort((a, b) => {
+        const doneA = a.type === 'assignment' ? a.progress === 10 : a.prepared === 10;
+        const doneB = b.type === 'assignment' ? b.progress === 10 : b.prepared === 10;
+        if (doneA !== doneB) return doneA ? 1 : -1;
+        return String(a.date || '9999').localeCompare(String(b.date || '9999'));
+    });
 
     if (allItems.length === 0) {
         const filterText = window.allItemsFilter === 'all' ? 'No assignments or tests yet. Add some in the "My Classes" tab!' :
