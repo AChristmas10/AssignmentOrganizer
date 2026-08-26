@@ -1,3 +1,5 @@
+import { dbGet, dbPut } from "./firebase.js";
+
 /**
  * How many syllabus reads a student gets, and how that is counted.
  *
@@ -45,33 +47,40 @@ export function quotaState(attemptTimestamps, now = new Date(), limit = SYLLABUS
 }
 
 /**
- * Reads the user's attempt list, claims a slot, and writes it back — in a
- * transaction, so two parses fired at once cannot both see nine used and both
- * proceed.
+ * Read the user's attempt list, claim a slot, write it back — with a
+ * compare-and-swap so two parses fired at once cannot both see nine used.
  *
- * Claims the slot BEFORE the Anthropic call, never after. If it were written on
+ * The Realtime Database REST API has no transactions, so this uses the ETag
+ * the read returns and refuses the write if anything changed underneath. One
+ * retry is enough: the loser of a race re-reads the winner's list and either
+ * finds room or correctly reports exhausted.
+ *
+ * Claims the slot BEFORE the model call, never after. If it were written on
  * completion, a request killed by the function timeout would never be counted,
  * and repeated timeouts would be unlimited and free.
  *
- * Returns { ok: true } or { ok: false, state } so the caller can explain.
+ * Returns { ok: true, state } or { ok: false, state }.
  */
-export async function claimQuotaSlot(db, uid, now = new Date()) {
-  const ref = db.ref(`syllabusQuota/${uid}/attempts`);
-  let observed = null;
+export async function claimQuotaSlot(uid, now = new Date()) {
+  const path = `syllabusQuota/${uid}/attempts`;
 
-  const result = await ref.transaction((current) => {
-    const state = quotaState(Array.isArray(current) ? current : [], now);
-    observed = state;
-    // Returning undefined aborts the transaction. Returning `current` would
-    // COMMIT a no-op, and committed:true is how the caller knows a slot was
-    // claimed — so the difference between these two lines is the difference
-    // between a working limit and no limit at all.
-    if (state.exhausted) return undefined;
-    return [...state.inWindowIso, now.toISOString()];
-  });
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const { value, etag } = await dbGet(path);
+    const state = quotaState(Array.isArray(value) ? value : [], now);
 
-  if (!result.committed || (observed && observed.exhausted)) {
-    return { ok: false, state: observed || quotaState([], now) };
+    if (state.exhausted) return { ok: false, state };
+
+    const written = await dbPut(
+      path,
+      [...state.inWindowIso, now.toISOString()],
+      etag
+    );
+    if (written) return { ok: true, state };
+    // 412: someone else claimed a slot between our read and write. Loop.
   }
-  return { ok: true, state: observed };
+
+  // Two consecutive losses means genuine contention on one account. Refusing
+  // is the safe answer — the alternative is writing without a guard.
+  const { value } = await dbGet(path);
+  return { ok: false, state: quotaState(Array.isArray(value) ? value : [], now) };
 }

@@ -19,7 +19,7 @@ import {
   SYLLABUS_MODEL,
   parseSyllabus,
 } from "../_lib/model.js";
-import { firebaseAdmin, verifyCaller } from "../_lib/firebase.js";
+import { verifyCaller } from "../_lib/firebase.js";
 import { claimQuotaSlot } from "../_lib/quota.js";
 import { extractPdfText, normalizeExtractedText } from "../_lib/pdf.js";
 
@@ -194,8 +194,7 @@ export default async function handler(req, res) {
   // -------------------------------------------------------------------
   let claim;
   try {
-    const { db } = firebaseAdmin();
-    claim = await claimQuotaSlot(db, uid);
+    claim = await claimQuotaSlot(uid);
   } catch (error) {
     // Fail CLOSED. Treating a failed lookup as "no parses yet" would report a
     // full allowance and let the request through, so a database blip would

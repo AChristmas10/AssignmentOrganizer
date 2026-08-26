@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@google/genai": "^2.18.0",
-    "firebase-admin": "^14.3.0",
+    "jose": "^6.2.10",
     "unpdf": "^1.8.1",
     "zod": "^4.4.3"
   },
