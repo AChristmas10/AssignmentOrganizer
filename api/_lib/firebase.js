@@ -58,12 +58,29 @@ function serviceAccount() {
   return cachedServiceAccount;
 }
 
+/**
+ * The Firebase project id, WITHOUT requiring the service account.
+ *
+ * This used to call serviceAccount(), which throws when FIREBASE_SERVICE_ACCOUNT
+ * is missing. verifyCaller() then caught that throw and returned null, so a
+ * deployment with no service account configured reported "sign in to read a
+ * syllabus" to a student who was correctly signed in. A configuration mistake
+ * wearing an authentication error's clothes — the same trap as the earlier
+ * missing-API-key case.
+ *
+ * The project id is not a secret: it is sitting in index.html. Verifying an ID
+ * token needs only it and Google's public keys, so token verification should
+ * not depend on the service account at all.
+ */
 export function projectId() {
-  return (
-    process.env.FIREBASE_PROJECT_ID ||
-    serviceAccount().project_id ||
-    "do2date"
-  );
+  if (process.env.FIREBASE_PROJECT_ID) return process.env.FIREBASE_PROJECT_ID;
+  try {
+    const id = serviceAccount().project_id;
+    if (id) return id;
+  } catch {
+    // No service account configured. Verification can still proceed.
+  }
+  return "do2date";
 }
 
 function databaseUrl() {
@@ -90,15 +107,25 @@ export async function verifyCaller(authorizationHeader) {
   const token = header.slice(7).trim();
   if (!token) return null;
 
+  const id = projectId();
+
   try {
-    const id = projectId();
     const { payload } = await jwtVerify(token, FIREBASE_JWKS, {
       issuer: `https://securetoken.google.com/${id}`,
       audience: id,
     });
     // `sub` is the uid. Firebase also sets user_id; sub is the standard claim.
     return typeof payload.sub === "string" && payload.sub ? payload.sub : null;
-  } catch {
+  } catch (error) {
+    // Log the real reason. A student cannot act on "expired" versus "wrong
+    // project" versus "cannot reach Google's keys", so they get one message —
+    // but without this line the operator cannot tell them apart either, and
+    // every cause looks identical from the outside.
+    console.error("[auth] ID token rejected", {
+      expectedIssuer: `https://securetoken.google.com/${id}`,
+      expectedAudience: id,
+      reason: error instanceof Error ? error.message : String(error),
+    });
     return null;
   }
 }

@@ -82,7 +82,20 @@ export default async function handler(req, res) {
       res,
       401,
       "UNAUTHENTICATED",
-      "Sign in to read a syllabus. Guest mode keeps your data on this device, but syllabus reading needs an account."
+      "Your sign-in couldn't be verified. Try signing out and back in. (If you're the site owner: check the [auth] line in the Vercel logs — it names the real reason.)"
+    );
+  }
+
+  // Checked AFTER identity but BEFORE the quota read, so a deployment missing
+  // its service account says so plainly instead of failing somewhere downstream
+  // with a message about something else.
+  if (!process.env.FIREBASE_SERVICE_ACCOUNT) {
+    console.error("[syllabus/parse] FIREBASE_SERVICE_ACCOUNT is not set on this deployment");
+    return fail(
+      res,
+      503,
+      "DB_NOT_CONFIGURED",
+      "The syllabus reader isn't fully set up yet. (If you're the site owner: add FIREBASE_SERVICE_ACCOUNT in Vercel and redeploy.)"
     );
   }
 
