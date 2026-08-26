@@ -1637,26 +1637,36 @@ function initializeAuth() {
     authInitialized = true;
     console.log('🔥 Firebase auth initializing...');
 
-    // Check if user wants to skip login
+    // Whether the student previously chose "continue without signing in".
     const skipLogin = localStorage.getItem('skipLogin');
 
-    if (skipLogin) {
-        console.log('👤 Guest mode - using localStorage only');
-        isGuestMode = true;
-        const signInButton = document.getElementById('signInButton');
-        if (signInButton) signInButton.style.display = 'block';
-        return; // Don't set up Firebase listener in guest mode
-    }
-
-    // Set up auth state listener
+    // THE BUG THIS REPLACES: when skipLogin was set, this returned early and
+    // never registered the auth listener at all. Firebase persists a session
+    // across reloads, so someone who had genuinely signed in — but had ALSO
+    // tapped "continue without signing in" at some point in the past — was
+    // treated as a guest forever. currentUser stayed null, firebaseAuth
+    // .currentUser stayed null, and nothing in the UI explained why. It
+    // surfaced as syllabus upload insisting "sign in to read a syllabus" at a
+    // student who was, in every ordinary sense, signed in.
+    //
+    // skipLogin should only decide whether we PROMPT. It should never decide
+    // whether we notice an existing session.
     window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
         console.log('🔐 Auth state changed:', user ? user.email : 'not signed in');
 
         if (user) {
-            // User IS signed in
+            // A real session wins over a stale guest preference. Clearing the
+            // flag means the choice does not come back to haunt them later.
+            localStorage.removeItem('skipLogin');
             handleUserSignedIn(user);
+        } else if (skipLogin) {
+            // Chose guest, and has no session. Respect that: no modal, just
+            // the Sign In button in the header.
+            console.log('👤 Guest mode - using localStorage only');
+            isGuestMode = true;
+            const signInButton = document.getElementById('signInButton');
+            if (signInButton) signInButton.style.display = 'block';
         } else {
-            // User is NOT signed in
             handleUserSignedOut();
         }
     });

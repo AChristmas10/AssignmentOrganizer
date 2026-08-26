@@ -413,15 +413,23 @@
     var cls = getClass(classIndex);
     if (!cls) return;
 
+    // Check both: script.js tracks `currentUser` from the auth listener, and
+    // the SDK tracks its own. They can disagree briefly during startup, and a
+    // student who is signed in should never be told otherwise because one of
+    // the two had not caught up yet.
     var auth = window.firebaseAuth;
-    var user = auth && auth.currentUser;
+    var user =
+      (typeof currentUser !== "undefined" && currentUser) ||
+      (auth && auth.currentUser) ||
+      null;
+
     if (!user) {
       setStatus(classIndex, {
         status: "failed",
         error: {
           code: "UNAUTHENTICATED",
           message:
-            "Sign in first — reading a syllabus runs on the server, so it needs an account. Your classes stay on this device either way.",
+            "Sign in first — reading a syllabus runs on the server, so it needs an account. Use the Sign In button at the top of the page. Your classes stay on this device either way.",
         },
       });
       return;
