@@ -229,6 +229,23 @@ export default async function handler(req, res) {
   // -------------------------------------------------------------------
   // 5. Ask the model, with the output shape pinned down.
   // -------------------------------------------------------------------
+
+  // Checked here rather than left to the catch below. A missing key threw a
+  // plain Error with no .status, which fell through as MODEL_undefined and
+  // reached the student as "unavailable right now — try again in a minute".
+  // That is actively misleading: retrying cannot fix a deployment that has no
+  // key, and it sends whoever is debugging to look for an outage instead of a
+  // setting. A configuration mistake should say it is a configuration mistake.
+  if (!process.env.GEMINI_API_KEY) {
+    console.error("[syllabus/parse] GEMINI_API_KEY is not set on this deployment");
+    return fail(
+      res,
+      503,
+      "MODEL_NOT_CONFIGURED",
+      "The syllabus reader isn't set up yet — the site is missing its AI key. (If you're the site owner: add GEMINI_API_KEY in Vercel and redeploy.)"
+    );
+  }
+
   try {
     const result = await parseSyllabus(text, { truncated });
 
