@@ -11,3 +11,7 @@ node_modules/
 # read/write on the whole database, bypassing every security rule.
 *serviceAccount*.json
 firebase-adminsdk-*.json
+
+# GitHub Pages artifact. The site is on Vercel now, and a committed CNAME
+# re-registers do2date.com as a Pages custom domain on every push.
+CNAME
