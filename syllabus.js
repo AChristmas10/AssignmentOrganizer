@@ -339,11 +339,13 @@
     var syl = syllabusOf(cls);
     var ready = syl && syl.status === "ready" && syl.data;
     var label = ready
-      ? "📄 Syllabus (" + (syl.data.key_dates || []).length + " dates)"
+      ? "Syllabus · " + (syl.data.key_dates || []).length + " dates"
       : "+ Add Syllabus";
 
+    // Secondary, like Add Test. Add Assignment is the one filled button in the
+    // row — three equally loud buttons means none of them reads as the default.
     return (
-      '<button onclick="Do2DateSyllabus.toggle(' + classIndex + ')">' +
+      '<button class="btn-secondary" onclick="Do2DateSyllabus.toggle(' + classIndex + ')">' +
       esc(label) +
       "</button>"
     );

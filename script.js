@@ -562,7 +562,7 @@ function render() {
                 <span id="toggle-icon-${classIndex}" style="margin-right:8px;">${cls.isOpen ? '▼' : '▶'}</span>
                 <div style="width:8px; height:8px; border-radius:50%; background:${cls.color}; margin-right:10px;"></div>
                 <h2 title="${cls.name}" style="margin:0;">${displayClassName}</h2>
-                <button onclick="event.stopPropagation(); changeClassColor(${classIndex})" style="margin-left:12px; padding:4px 10px; font-size:0.8em; background:var(--bg-tertiary); color:var(--text-secondary);" title="Change color">🎨</button>
+                <button onclick="event.stopPropagation(); changeClassColor(${classIndex})" class="icon-btn icon-btn--inline" title="Change colour" aria-label="Change class colour"><svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></button>
             </div>
             <span class="assignment-count">${uncompletedCount} assignments</span>
         </div>
@@ -571,7 +571,7 @@ function render() {
             <!-- Add buttons -->
             <div style="margin-bottom:10px; display:flex; gap:8px;">
                 <button onclick="toggleAddAssignment(${classIndex})" id="show-add-assignment-${classIndex}">+ Add Assignment</button>
-                <button onclick="toggleAddTest(${classIndex})" id="show-add-test-${classIndex}">+ Add Test</button>
+                <button onclick="toggleAddTest(${classIndex})" id="show-add-test-${classIndex}" class="btn-secondary">+ Add Test</button>
                 ${Do2DateSyllabus.buttonHtml(classIndex, cls)}
             </div>
 
@@ -588,7 +588,8 @@ function render() {
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
                     <label style="display:flex; align-items:center; gap:6px; color:var(--text-primary); font-size:0.9em;">
                         <input type="checkbox" id="a-recurring-${classIndex}" onchange="toggleRecurringOptions(${classIndex}, 'assignment')">
-                        🔄 Recurring
+                        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+                        Recurring
                     </label>
                     <select id="a-frequency-${classIndex}" style="display:none; padding:6px; border-radius:6px; border:2px solid var(--border); background:var(--bg-primary); color:var(--text-primary);" onchange="updateRecurringLabel(${classIndex}, 'assignment')">
                         <option value="weekly">Weekly</option>
@@ -604,14 +605,14 @@ function render() {
             </div>
                 
             <!-- Add Test Form (hidden by default) -->
-            <div id="add-test-form-${classIndex}" style="display:none; margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:4px;">
+            <div id="add-test-form-${classIndex}" style="display:none; margin-bottom:var(--space-3); padding:var(--space-3); background:var(--bg-tertiary); border-radius:var(--radius-md);">
                 <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-bottom:8px;">
                     <input id="t-name-${classIndex}" placeholder="Test name" style="flex: 1; min-width: 150px;">
                     <input id="t-date-${classIndex}" type="date" style="width: 140px;">
                 </div>
                 <div style="display:flex; gap:8px;">
                     <button onclick="addTest(${classIndex})">Save Test</button>
-                    <button onclick="cancelAddTest(${classIndex})" style="background:#ccc;">Cancel</button>
+                    <button onclick="cancelAddTest(${classIndex})" class="btn-secondary">Cancel</button>
                 </div>
             </div>
 
@@ -626,9 +627,10 @@ function render() {
                 <div style="display:flex; justify-content: space-between; align-items:center;">
                     <div>
                         <strong title="${a.name}">${displayAssignmentName}</strong>
-                        <span style="font-size:0.85em; color:#555; margin-left:8px;">
-                            ${formatDate(a.due)}${timeDisplay ? ' at ' + timeDisplay : ''} (<span style="color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(a)]};">${dueInText(a)}</span>)
+                        <span style="font-size:0.85em; color:var(--text-secondary); margin-left:8px;">
+                            ${formatDate(a.due)}${timeDisplay ? ' at ' + timeDisplay : ''}
                         </span>
+                        <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(a)]};">${dueInText(a)}</span>
                     </div>
                 </div>
                 <div>
@@ -656,9 +658,10 @@ function render() {
                 <div style="display:flex; justify-content: space-between; align-items:center;">
                     <div>
                         <strong title="${t.name}">${displayTestName}</strong>
-                        <span style="font-size:0.85em; color:#555; margin-left:8px;">
-                            ${formatDate(t.date)} (<span style="color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(t)]};">${dueInText(t)}</span>)
+                        <span style="font-size:0.85em; color:var(--text-secondary); margin-left:8px;">
+                            ${formatDate(t.date)}
                         </span>
+                        <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(t)]};">${dueInText(t)}</span>
                     </div>
                 </div>
                 <div>
@@ -677,7 +680,7 @@ function render() {
         }).join('')}
 
             <div style="margin-top:15px; text-align:right;">
-                <button onclick="removeClass(${classIndex})" style="background:#ccc; color:#000; border:none; padding:4px 8px; border-radius:4px; cursor:pointer;">
+                <button onclick="removeClass(${classIndex})" class="btn-danger" style="padding:6px 14px; font-size:0.82rem;">
                     Remove Class
                 </button>
             </div>
@@ -791,7 +794,7 @@ function renderAllItems() {
                     <button class="filter-tab ${window.allItemsFilter === 'assignments' ? 'active' : ''}" onclick="setAllItemsFilter('assignments')">Assignments</button>
                     <button class="filter-tab ${window.allItemsFilter === 'tests' ? 'active' : ''}" onclick="setAllItemsFilter('tests')">Tests</button>
                 </div>
-                <p style="text-align:center; color:#999; padding:40px;">${filterText}</p>
+                <p style="text-align:center; color:var(--text-secondary); padding:var(--space-6);">${filterText}</p>
             </div>
         `;
         return;
@@ -824,7 +827,8 @@ function renderAllItems() {
                                 </span>
                             </div>
                             <span style="font-size:0.85em; color:var(--text-secondary); margin-top: 4px; display: block;">
-                                ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''} (<span style="color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(item)]};">${dueInText(item)}</span>)
+                                ${formatDate(item.date)}${isAssignment && item.time ? ' at ' + formatTime(item.time) : ''}
+                                <span class="due-chip" style="margin-left:6px; color:${Do2DateDates.BUCKET_COLORS[dueBucketOf(item)]};">${dueInText(item)}</span>
                             </span>
                         </div>
                     </div>
@@ -838,7 +842,7 @@ function renderAllItems() {
                     ${completed ? `<div class="completed-label">✔ ${isAssignment ? 'Completed' : 'Ready'}</div>` : ''}
                     <div style="margin-top:8px; display:flex; gap:8px;">
                         <button onclick="editItem(${item.classIndex}, ${item.itemIndex}, '${item.type}')" style="font-size:0.85em; padding:6px 12px;">Edit</button>
-                        <button onclick="${isAssignment ? 'removeAssignment' : 'removeTest'}(${item.classIndex},${item.itemIndex}); renderAllItems();" style="font-size:0.85em; padding:6px 12px; background:#ef4444;">Remove</button>
+                        <button onclick="${isAssignment ? 'removeAssignment' : 'removeTest'}(${item.classIndex},${item.itemIndex}); renderAllItems();" class="btn-danger" style="font-size:0.85em; padding:6px 12px;">Remove</button>
                     </div>
                 </div>
                 `;
@@ -1365,17 +1369,32 @@ async function toggleNotifications() {
 function updateNotificationIcon() {
     const notifBtn = document.getElementById('notificationToggle');
     if (notifBtn) {
-        if (Notification.permission === 'granted') {
-            notifBtn.textContent = '🔔';
-            notifBtn.style.opacity = '1';
-        } else {
-            notifBtn.textContent = '🔕';
-            notifBtn.style.opacity = '0.5';
-        }
+        const granted = Notification.permission === 'granted';
+        // A bell with a slash through it, rather than a different emoji. The
+        // slash is the signal; the dimming is reinforcement, not the message.
+        notifBtn.innerHTML = granted
+            ? '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'
+            : '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/><line x1="3" y1="3" x2="21" y2="21"/></svg>';
+        notifBtn.classList.toggle('is-off', !granted);
+        notifBtn.title = granted ? 'Notifications on' : 'Notifications off';
     }
 }
 
 // DARK MODE TOGGLE
+/**
+ * Sun when the theme is dark (tap to go light), moon when it is light.
+ *
+ * Defined once because there are two call sites — page load and the click
+ * handler — and they had already drifted: the click handler was updated to SVG
+ * while startup still wrote an emoji, so the icon was an emoji until you
+ * happened to toggle it.
+ */
+function themeIconMarkup(theme) {
+    return theme === 'dark'
+        ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>'
+        : '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+}
+
 function toggleDarkMode() {
     const html = document.documentElement;
     const currentTheme = html.getAttribute('data-theme');
@@ -1385,8 +1404,7 @@ function toggleDarkMode() {
     html.setAttribute('data-theme', newTheme);
     localStorage.setItem('theme', newTheme);
 
-    // Update button icon
-    toggleBtn.textContent = newTheme === 'dark' ? '☀️' : '🌙';
+    toggleBtn.innerHTML = themeIconMarkup(newTheme);
 }
 
 // Initialize theme on page load
@@ -1396,7 +1414,7 @@ function toggleDarkMode() {
 
     document.documentElement.setAttribute('data-theme', savedTheme);
     if (toggleBtn) {
-        toggleBtn.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+        toggleBtn.innerHTML = themeIconMarkup(savedTheme);
     }
 
     // Update notification icon

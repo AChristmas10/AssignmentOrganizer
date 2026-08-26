@@ -16,8 +16,19 @@
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
     --radius-sm: 6px;
-    --radius-md: 8px;
-    --radius-lg: 12px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --radius-pill: 999px;
+
+    /* One spacing scale. Every new element picks from these rather than
+       inventing 10px, 15px or 18px, which is how ten different paddings ended
+       up in the same card. */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 24px;
+    --space-6: 32px;
 }
 
 [data-theme="dark"] {
@@ -61,12 +72,17 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
-    padding: 20px 0;
+    gap: var(--space-3);
+    /* Wrap rather than overlap. At 430px the brand and five buttons cannot
+       share a line, and the old fixed row let them collide. */
+    flex-wrap: wrap;
+    margin-bottom: var(--space-5);
+    padding: var(--space-4) 0;
 }
 
 h1 {
     font-size: 2rem;
+    line-height: 1.2;
     font-weight: 700;
     background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
     -webkit-background-clip: text;
@@ -74,25 +90,74 @@ h1 {
     background-clip: text;
 }
 
-.dark-mode-toggle {
-    background: var(--bg-primary);
-    border: 2px solid var(--border);
+/* ---------- ICON BUTTONS ----------
+   44px because that is the minimum comfortable touch target, and this app is
+   used on phones far more than desktops. The icon inside is 20px; the rest is
+   deliberate breathing room, not padding that happened. */
+.icon-btn {
+    background: transparent;
+    border: 1px solid var(--border);
     width: 44px;
     height: 44px;
-    border-radius: 50%;
-    font-size: 1.3rem;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: var(--shadow-sm);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    box-shadow: none;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    color: var(--text-secondary);
+    flex: none;
 }
 
-.dark-mode-toggle:hover {
-    transform: scale(1.1);
-    box-shadow: var(--shadow-md);
+.icon-btn:hover {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+    border-color: var(--text-secondary);
+    /* No transform. The old scale(1.1) made the whole header twitch on hover,
+       and on touch devices it fires on tap and looks like a glitch. */
+    transform: none;
+}
+
+.icon-btn svg {
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: currentColor;      /* inherits the theme; no dark-mode variant needed */
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    display: block;
+}
+
+/* The Sign in button sits in the same row but is a label, not an icon. */
+.icon-btn--text {
+    width: auto;
+    padding: 0 16px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    white-space: nowrap;
+}
+
+.icon-btn--text:hover {
+    background: var(--primary-dark);
+    border-color: var(--primary-dark);
+    color: #fff;
+}
+
+/* Notifications off: dimmed AND struck through, so the state is not carried by
+   opacity alone. A 50%-opacity icon is easy to miss and impossible to
+   distinguish from "disabled" at a glance. */
+.icon-btn.is-off {
+    opacity: 0.55;
+}
+
+.icon-btn.is-off svg {
+    stroke-dasharray: none;
 }
 
 /* ---------- TABS ---------- */
@@ -121,7 +186,75 @@ h1 {
     min-width: 120px;
 }
 
-.tab-button:hover {
+.tab-/* ---------- SECONDARY BUTTONS ----------
+   Three identical filled buttons in a row means none of them is the obvious
+   one. The first action in a group stays filled; the rest are quiet. */
+button.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+button.btn-secondary:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
+}
+
+/* Destructive, and styled as such rather than as a grey slab with black text
+   that ignored the theme entirely. */
+button.btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+button.btn-danger:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+/* ---------- DUE CHIP ----------
+   The due text used to be grey parentheses inside a longer sentence. As a chip
+   it can be scanned down a column. Colour is never the only signal — the words
+   ("Past due", "Due today") carry the meaning on their own. */
+.due-chip {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    /* Tinted with the chip's own colour. color-mix takes a var(), which string
+       concatenation ("var(--danger)" + "1f") does not — that produced an
+       invalid declaration that the browser dropped without complaint, so the
+       chips rendered as bare coloured text. */
+    background: color-mix(in srgb, currentColor 15%, transparent);
+    color: var(--text-secondary);
+}
+
+/* Small icon button that sits inline with text, e.g. the class colour picker. */
+.icon-btn--inline {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    margin-left: var(--space-3);
+    flex: none;
+}
+
+.icon-btn--inline svg {
+    width: 15px;
+    height: 15px;
+}
+
+@media (max-width: 480px) {
+    h1 { font-size: 1.6rem; }
+    .header-container { padding: var(--space-3) 0; margin-bottom: var(--space-4); }
+}
+
+button:hover {
     background: var(--bg-tertiary);
     color: var(--text-primary);
 }
@@ -170,7 +303,75 @@ h1 {
     box-shadow: var(--shadow-sm);
 }
 
-.add-class button:hover {
+.add-class /* ---------- SECONDARY BUTTONS ----------
+   Three identical filled buttons in a row means none of them is the obvious
+   one. The first action in a group stays filled; the rest are quiet. */
+button.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+button.btn-secondary:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
+}
+
+/* Destructive, and styled as such rather than as a grey slab with black text
+   that ignored the theme entirely. */
+button.btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+button.btn-danger:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+/* ---------- DUE CHIP ----------
+   The due text used to be grey parentheses inside a longer sentence. As a chip
+   it can be scanned down a column. Colour is never the only signal — the words
+   ("Past due", "Due today") carry the meaning on their own. */
+.due-chip {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    /* Tinted with the chip's own colour. color-mix takes a var(), which string
+       concatenation ("var(--danger)" + "1f") does not — that produced an
+       invalid declaration that the browser dropped without complaint, so the
+       chips rendered as bare coloured text. */
+    background: color-mix(in srgb, currentColor 15%, transparent);
+    color: var(--text-secondary);
+}
+
+/* Small icon button that sits inline with text, e.g. the class colour picker. */
+.icon-btn--inline {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    margin-left: var(--space-3);
+    flex: none;
+}
+
+.icon-btn--inline svg {
+    width: 15px;
+    height: 15px;
+}
+
+@media (max-width: 480px) {
+    h1 { font-size: 1.6rem; }
+    .header-container { padding: var(--space-3) 0; margin-bottom: var(--space-4); }
+}
+
+button:hover {
     transform: translateY(-2px);
     box-shadow: var(--shadow-md);
 }
@@ -338,6 +539,74 @@ button {
     background: var(--primary);
     color: white;
     box-shadow: var(--shadow-sm);
+}
+
+/* ---------- SECONDARY BUTTONS ----------
+   Three identical filled buttons in a row means none of them is the obvious
+   one. The first action in a group stays filled; the rest are quiet. */
+button.btn-secondary {
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+button.btn-secondary:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--text-secondary);
+}
+
+/* Destructive, and styled as such rather than as a grey slab with black text
+   that ignored the theme entirely. */
+button.btn-danger {
+    background: transparent;
+    color: var(--danger);
+    border: 1px solid var(--border);
+    box-shadow: none;
+}
+
+button.btn-danger:hover {
+    background: var(--danger);
+    border-color: var(--danger);
+    color: #fff;
+}
+
+/* ---------- DUE CHIP ----------
+   The due text used to be grey parentheses inside a longer sentence. As a chip
+   it can be scanned down a column. Colour is never the only signal — the words
+   ("Past due", "Due today") carry the meaning on their own. */
+.due-chip {
+    display: inline-block;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 9px;
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    /* Tinted with the chip's own colour. color-mix takes a var(), which string
+       concatenation ("var(--danger)" + "1f") does not — that produced an
+       invalid declaration that the browser dropped without complaint, so the
+       chips rendered as bare coloured text. */
+    background: color-mix(in srgb, currentColor 15%, transparent);
+    color: var(--text-secondary);
+}
+
+/* Small icon button that sits inline with text, e.g. the class colour picker. */
+.icon-btn--inline {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    margin-left: var(--space-3);
+    flex: none;
+}
+
+.icon-btn--inline svg {
+    width: 15px;
+    height: 15px;
+}
+
+@media (max-width: 480px) {
+    h1 { font-size: 1.6rem; }
+    .header-container { padding: var(--space-3) 0; margin-bottom: var(--space-4); }
 }
 
 button:hover {
