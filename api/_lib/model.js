@@ -22,8 +22,20 @@ import { z } from "zod";
  * Flash, not Pro. A syllabus is an extraction task, not a reasoning one, and
  * Flash is on the free tier with far higher rate limits. If extraction quality
  * disappoints, fix the prompt before reaching for a bigger model.
+ *
+ * WHY THIS IS AN ENV VAR. It was hardcoded to "gemini-2.5-flash", which Google
+ * then closed to new API keys:
+ *
+ *   404 NOT_FOUND — "This model models/gemini-2.5-flash is no longer available
+ *   to new users. Please update your code to use models/gemini-3.6-flash"
+ *
+ * Note what that means: the code was fine and kept working for existing keys,
+ * but any key created after the cutoff got a 404. That is not a failure a test
+ * suite catches, and it will happen again — model names have a shelf life.
+ * Reading it from the environment means the next deprecation is a dashboard
+ * change and a redeploy, not a code change, a commit, and a push.
  */
-export const SYLLABUS_MODEL = "gemini-2.5-flash";
+export const SYLLABUS_MODEL = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 
 export function gemini() {
   const apiKey = process.env.GEMINI_API_KEY;

@@ -302,6 +302,18 @@ export default async function handler(req, res) {
       detail: error instanceof Error ? error.message : String(error),
     });
 
+    // A 404 here is never transient — it means the model name is retired or
+    // unavailable on this key, and "try again in a minute" would be a lie that
+    // sends the owner looking for an outage.
+    if (status === 404) {
+      return fail(
+        res,
+        502,
+        code,
+        `The syllabus reader is pointed at a model that isn't available ("${SYLLABUS_MODEL}"). (If you're the site owner: set GEMINI_MODEL in Vercel to the model the log names, then redeploy.)`
+      );
+    }
+
     return fail(
       res,
       502,

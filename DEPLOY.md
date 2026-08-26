@@ -82,6 +82,7 @@ caller cannot edit. Both need admin credentials.
    | Name | Value |
    |---|---|
    | `GEMINI_API_KEY` | from aistudio.google.com/apikey |
+   | `GEMINI_MODEL` | *optional* — defaults to `gemini-3.6-flash`. Set this if the logs report a 404 saying the model is retired; Google names the replacement in the error. |
    | `FIREBASE_SERVICE_ACCOUNT` | the base64 string from step 1 |
    | `FIREBASE_DATABASE_URL` | `https://do2date-default-rtdb.firebaseio.com` |
 
