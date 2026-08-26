@@ -453,13 +453,20 @@
       });
 
       if (!response.ok || !result || !result.ok) {
+        // The fallback text used to be word-for-word identical to the server's
+        // own 502 message. That meant "the server explained itself" and "the
+        // server died without a body" looked the same on screen, and cost a
+        // debugging round trip. If we are guessing, the message says so and
+        // carries the status code.
         setStatus(classIndex, {
           status: "failed",
           error: {
             code: (result && result.code) || "HTTP_" + response.status,
             message:
               (result && result.error) ||
-              "The syllabus reader is unavailable right now. Try again in a minute.",
+              "The server returned an error (HTTP " +
+                response.status +
+                ") with no explanation — it probably crashed. Check the Vercel runtime logs.",
           },
         });
         return;
