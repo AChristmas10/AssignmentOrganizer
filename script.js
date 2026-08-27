@@ -1924,6 +1924,34 @@ async function signOutUser() {
     }
 }
 
+/**
+ * Coerce whatever Firebase hands back into an array of classes.
+ *
+ * The Realtime Database has no array type. It stores a JS array as an object
+ * with numeric keys, and only reconstructs an array on read when those keys run
+ * 0,1,2… with no gaps. Our save() always writes the whole array, so the keys
+ * normally are contiguous and this normally returns an array — right up until
+ * something puts a hole in it: an edit in the Firebase console, a partial write,
+ * a null element.
+ *
+ * When that happens `classes` becomes a plain object, render() calls
+ * classes.map, and the app dies with "classes.map is not a function" — showing
+ * a student an empty screen while their data sits safely in the database. This
+ * turns a total failure into a silent recovery.
+ */
+function normalizeClasses(value) {
+    if (Array.isArray(value)) return value.filter(Boolean);
+    if (value && typeof value === 'object') {
+        // Numeric keys in order, so a gap shifts positions rather than
+        // scrambling them.
+        return Object.keys(value)
+            .sort((a, b) => Number(a) - Number(b))
+            .map((key) => value[key])
+            .filter(Boolean);
+    }
+    return [];
+}
+
 // LOAD DATA FROM FIREBASE
 async function loadUserDataFromFirebase(userId) {
     console.log('📥 Loading data from Firebase for user:', userId);
@@ -1945,7 +1973,7 @@ async function loadUserDataFromFirebase(userId) {
             if (localData.length === 0) {
                 // No local data - use cloud data
                 console.log('✅ Using cloud data (no local data)');
-                classes = firebaseData;
+                classes = normalizeClasses(firebaseData);
             } else {
                 // Both local and cloud data exist - ask user
                 const asked = sessionStorage.getItem('mergeAsked');
@@ -1961,15 +1989,15 @@ async function loadUserDataFromFirebase(userId) {
 
                     if (useCloud) {
                         console.log('☁️ User chose cloud data');
-                        classes = firebaseData;
+                        classes = normalizeClasses(firebaseData);
                     } else {
                         console.log('💾 User chose local data - uploading to cloud');
-                        classes = localData;
+                        classes = normalizeClasses(localData);
                         saveToFirebase(userId);
                     }
                 } else {
                     // Already asked - use local
-                    classes = localData;
+                    classes = normalizeClasses(localData);
                 }
             }
 
@@ -2061,7 +2089,7 @@ function setupRealtimeSync(userId) {
             // Only update if data actually changed
             if (JSON.stringify(firebaseData) !== JSON.stringify(classes)) {
                 console.log('🔄 Syncing data from cloud');
-                classes = firebaseData;
+                classes = normalizeClasses(firebaseData);
                 localStorage.setItem('classes', JSON.stringify(classes));
                 render();
             }

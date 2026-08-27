@@ -307,23 +307,24 @@ function showGameOver(gameType, score, scoreText, subtitle) {
                     <div style="font-size:0.9em; color:rgba(255,255,255,0.9);">${subtitle}</div>
                 </div>
                 
-                ${currentUser ? `
-                    <button onclick="submitScore('${gameType}', ${score})" style="width:100%; padding:14px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; font-size:1em; margin-bottom:12px;">
-                        🏆 Submit to Leaderboard
-                    </button>
-                ` : `
-                    <div style="padding:14px; background:rgba(239, 68, 68, 0.1); border:2px dashed #ef4444; border-radius:8px; margin-bottom:12px; color:var(--text-primary);">
-                        <strong>⚠️ Not signed in</strong><br>
-                        <span style="font-size:0.9em; color:var(--text-secondary);">Sign in to save your score!</span>
+                <!-- Filled in by autoSubmitScore() once the write settles.
+                     Reserves its own height so the buttons below do not jump
+                     when the result lands. -->
+                <div id="scoreStatus" style="margin-bottom:16px; min-height:44px;">
+                    <div style="padding:12px 14px; background:var(--bg-tertiary); border:1px solid var(--border); border-radius:var(--radius-md); color:var(--text-secondary); font-size:0.92em;">
+                        Saving…
                     </div>
-                `}
-                
+                </div>
+
                 <div style="display:flex; gap:8px;">
-                    <button onclick="startGame('${gameType}')" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
-                        Play Again
+                    <button onclick="startGame('${gameType}')" style="flex:1; padding:12px; min-height:44px;">
+                        Play again
                     </button>
-                    <button onclick="closeGame(); switchView('games');" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
-                        Menu
+                    <button onclick="showLeaderboard('${gameType}')" class="btn-secondary" style="flex:1; padding:12px; min-height:44px;">
+                        Leaderboard
+                    </button>
+                    <button onclick="closeGame(); switchView('games');" class="btn-secondary" style="flex:1; padding:12px; min-height:44px;">
+                        Done
                     </button>
                 </div>
             </div>
@@ -334,6 +335,11 @@ function showGameOver(gameType, score, scoreText, subtitle) {
     if (existing) existing.remove();
 
     document.body.insertAdjacentHTML('beforeend', gameHTML);
+
+    // Fire and forget. The card is already on screen; the status line fills
+    // itself in when the write settles, so a slow connection never stands
+    // between the player and the Play again button.
+    autoSubmitScore(gameType, score);
 }
 
 /**
@@ -366,119 +372,85 @@ function formatScore(gameType, value) {
     return spec ? spec.format(value) : String(value);
 }
 
-// Submit score to leaderboard
-async function submitScore(gameType, score) {
-    if (!currentUser) {
-        alert('You must be signed in to submit scores!');
-        return;
-    }
+/**
+ * Save a score if it beats the player's own best. Returns what happened.
+ *
+ * Pure-ish on purpose: it decides and writes, and says nothing about the UI.
+ * The previous version did both, which is how a null .remove() ended up being
+ * reported to students as a database failure.
+ *
+ * Outcomes: 'saved' | 'notBest' | 'signedOut' | 'noName' | 'error'
+ */
+async function saveScoreIfBest(gameType, score) {
+    if (!currentUser || isGuestMode) return { outcome: 'signedOut' };
 
-    // WAS: currentUser.email.split('@')[0]
-    //
-    // That published an email-derived identifier to a world-readable path. For
-    // a university address the local part is a real name and the domain is
-    // guessable, so the leaderboard handed out working email addresses for
-    // every student who ever played a game. ensureDisplayName() asks once and
-    // defaults to something anonymous; see script.js.
     const username = await ensureDisplayName();
-    if (!username) {
-        // Student chose not to post. Close the game quietly rather than
-        // treating a deliberate choice as an error.
-        closeGame();
-        switchView('games');
-        return;
-    }
-    const timestamp = Date.now();
+    if (!username) return { outcome: 'noName' };
 
     try {
-        // Check if user already has a score for this game
-        const leaderboardRef = window.firebaseRef(window.firebaseDatabase, `leaderboards/${gameType}/${currentUser.uid}`);
-        const snapshot = await window.firebaseGet(leaderboardRef);
+        const ref = window.firebaseRef(window.firebaseDatabase, `leaderboards/${gameType}/${currentUser.uid}`);
+        const snapshot = await window.firebaseGet(ref);
 
-        let shouldSubmit = true;
-        let isNewBest = true;
-
+        let previous = null;
         if (snapshot.exists()) {
-            const existingScore = snapshot.val().score;
-
-            const timeBased = isTimeBased(gameType);
-
-            if (timeBased) {
-                // Lower is better - only submit if new score is lower
-                if (score >= existingScore) {
-                    shouldSubmit = false;
-                    isNewBest = false;
-                }
-            } else {
-                // Higher is better - only submit if new score is higher
-                if (score <= existingScore) {
-                    shouldSubmit = false;
-                    isNewBest = false;
-                }
-            }
+            previous = snapshot.val().score;
+            const better = isTimeBased(gameType) ? score < previous : score > previous;
+            if (!better) return { outcome: 'notBest', previous };
         }
 
-        if (shouldSubmit) {
-            await window.firebaseSet(leaderboardRef, {
-                username: username,
-                score: score,
-                timestamp: timestamp
-            });
-
-            console.log('✅ New personal best submitted to leaderboard!');
-            closeGame();
-
-            // Show success message
-            const successHTML = `
-                <div id="gameContainer" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;">
-                    <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:100%; box-shadow:var(--shadow-lg); text-align:center;">
-                        <div style="font-size:3rem; margin-bottom:16px;">🎉</div>
-                        <h2 style="margin:0 0 12px 0; color:var(--text-primary);">Personal Best!</h2>
-                        <p style="color:var(--text-secondary); margin-bottom:24px;">Your score has been submitted to the leaderboard!</p>
-                        <button onclick="closeGame(); showLeaderboard('${gameType}');" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; margin-bottom:8px;">
-                            View Leaderboard 🏆
-                        </button>
-                        <button onclick="closeGame(); switchView('games');" style="width:100%; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
-                            Back to Menu
-                        </button>
-                    </div>
-                </div>
-            `;
-            // closeGame() above already removed #gameContainer, so this used
-            // to be .remove() on null. It threw, the outer catch turned that
-            // into "Failed to submit score", and the score had in fact saved
-            // perfectly. A UI error was being reported as a database error.
-            document.body.insertAdjacentHTML('beforeend', successHTML);
-        } else {
-            console.log('⏭️ Score not submitted - not better than personal best');
-            closeGame();
-
-            // Show "not your best" message
-            const notBestHTML = `
-                <div id="gameContainer" style="position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.9); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px;">
-                    <div style="background:var(--bg-primary); padding:32px; border-radius:16px; max-width:400px; width:100%; box-shadow:var(--shadow-lg); text-align:center;">
-                        <div style="font-size:3rem; margin-bottom:16px;">📊</div>
-                        <h2 style="margin:0 0 12px 0; color:var(--text-primary);">Not Your Best</h2>
-                        <p style="color:var(--text-secondary); margin-bottom:8px;">You've done better before!</p>
-                        <p style="color:var(--text-primary); font-weight:600; margin-bottom:24px;">Keep trying to beat your personal best!</p>
-                        <div style="display:flex; gap:8px;">
-                            <button onclick="startGame('${gameType}')" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">
-                                Try Again
-                            </button>
-                            <button onclick="closeGame(); switchView('games');" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
-                                Menu
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            // Same as above: closeGame() has already removed it.
-            document.body.insertAdjacentHTML('beforeend', notBestHTML);
-        }
+        await window.firebaseSet(ref, {
+            username: username,
+            score: score,
+            timestamp: Date.now(),
+        });
+        return { outcome: 'saved', previous };
     } catch (error) {
-        console.error('❌ Error submitting score:', error);
-        console.error('Error details:', error.code, error.message);
-        alert('Failed to submit score: ' + error.message + '\n\nMake sure Firebase database rules are updated!');
+        // Only the database call is inside this try. Rendering happens in the
+        // caller, so a DOM mistake can never again be reported as a failed save.
+        console.error('Could not save score', error);
+        return { outcome: 'error' };
+    }
+}
+
+/**
+ * Save in the background and update the game-over card in place.
+ *
+ * There is no Submit button any more. Asking someone to press a button to
+ * record a score they just earned is a question with one sensible answer, and
+ * the app already knows whether it beat their previous best. A personal best
+ * is worth telling them about; a slower round is not worth a decision.
+ */
+async function autoSubmitScore(gameType, score) {
+    const line = document.getElementById('scoreStatus');
+    const result = await saveScoreIfBest(gameType, score);
+
+    // The player may have hit Play Again or Menu while the write was in flight.
+    const current = document.getElementById('scoreStatus');
+    if (!current || current !== line) return;
+
+    const box = (bg, border, html) =>
+        `<div style="padding:12px 14px; background:${bg}; border:1px solid ${border}; border-radius:var(--radius-md); color:var(--text-primary); font-size:0.92em;">${html}</div>`;
+
+    const tint = (token, pct) => `color-mix(in srgb, var(${token}) ${pct}%, transparent)`;
+
+    if (result.outcome === 'saved') {
+        current.innerHTML = box(tint('--success', 14), tint('--success', 45),
+            `<strong style="color:var(--success);">New personal best</strong>`
+            + (result.previous !== null && result.previous !== undefined
+                ? ` <span style="color:var(--text-secondary);">— beat ${formatScore(gameType, result.previous)}</span>`
+                : ` <span style="color:var(--text-secondary);">— saved to the leaderboard</span>`));
+    } else if (result.outcome === 'notBest') {
+        current.innerHTML = box('var(--bg-tertiary)', 'var(--border)',
+            `<span style="color:var(--text-secondary);">Your best is still ${formatScore(gameType, result.previous)}</span>`);
+    } else if (result.outcome === 'signedOut') {
+        current.innerHTML = box('var(--bg-tertiary)', 'var(--border)',
+            `<span style="color:var(--text-secondary);">Sign in to save scores to the leaderboard.</span>`);
+    } else if (result.outcome === 'noName') {
+        current.innerHTML = box('var(--bg-tertiary)', 'var(--border)',
+            `<span style="color:var(--text-secondary);">Not saved — no leaderboard name set.</span>`);
+    } else {
+        current.innerHTML = box(tint('--danger', 12), tint('--danger', 45),
+            `<span style="color:var(--text-secondary);">Couldn't save that score. Your game still counted.</span>`);
     }
 }
 
