@@ -322,7 +322,7 @@ function showGameOver(gameType, score, scoreText, subtitle) {
                     <button onclick="startGame('${gameType}')" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
                         Play Again
                     </button>
-                    <button onclick="closeGame(); showGamesMenu();" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
+                    <button onclick="closeGame(); switchView('games');" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
                         Menu
                     </button>
                 </div>
@@ -334,6 +334,36 @@ function showGameOver(gameType, score, scoreText, subtitle) {
     if (existing) existing.remove();
 
     document.body.insertAdjacentHTML('beforeend', gameHTML);
+}
+
+/**
+ * What each game's stored score actually means.
+ *
+ * "Spot the Odd One" records an average in SECONDS (0.87); "React!" records one
+ * in MILLISECONDS (210). Both were treated as one "time-based" category and
+ * rendered with `${score}ms`, so a 0.87-second average displayed as "0.87ms" —
+ * a thousand times faster than any human reaction, on a leaderboard whose whole
+ * point is comparing times.
+ *
+ * The units are left as each game already stores them rather than migrated,
+ * because rows already exist and rewriting them would silently reorder a
+ * leaderboard. Instead the difference lives here, once, where it is visible.
+ */
+const SCORE_UNITS = {
+    oddEmoji:   { lowerIsBetter: true,  format: (v) => `${Number(v).toFixed(2)}s` },
+    reaction:   { lowerIsBetter: true,  format: (v) => `${Math.round(v)}ms` },
+    cubeRunner: { lowerIsBetter: false, format: (v) => String(v) },
+    tower:      { lowerIsBetter: false, format: (v) => String(v) },
+    pattern:    { lowerIsBetter: false, format: (v) => String(v) },
+};
+
+function isTimeBased(gameType) {
+    return SCORE_UNITS[gameType]?.lowerIsBetter === true;
+}
+
+function formatScore(gameType, value) {
+    const spec = SCORE_UNITS[gameType];
+    return spec ? spec.format(value) : String(value);
 }
 
 // Submit score to leaderboard
@@ -355,7 +385,7 @@ async function submitScore(gameType, score) {
         // Student chose not to post. Close the game quietly rather than
         // treating a deliberate choice as an error.
         closeGame();
-        showGamesMenu();
+        switchView('games');
         return;
     }
     const timestamp = Date.now();
@@ -371,8 +401,7 @@ async function submitScore(gameType, score) {
         if (snapshot.exists()) {
             const existingScore = snapshot.val().score;
 
-            // For time-based games (lower is better)
-            const timeBased = ['oddEmoji', 'reaction'].includes(gameType);
+            const timeBased = isTimeBased(gameType);
 
             if (timeBased) {
                 // Lower is better - only submit if new score is lower
@@ -409,13 +438,16 @@ async function submitScore(gameType, score) {
                         <button onclick="closeGame(); showLeaderboard('${gameType}');" style="width:100%; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600; margin-bottom:8px;">
                             View Leaderboard 🏆
                         </button>
-                        <button onclick="closeGame(); showGamesMenu();" style="width:100%; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
+                        <button onclick="closeGame(); switchView('games');" style="width:100%; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
                             Back to Menu
                         </button>
                     </div>
                 </div>
             `;
-            document.getElementById('gameContainer').remove();
+            // closeGame() above already removed #gameContainer, so this used
+            // to be .remove() on null. It threw, the outer catch turned that
+            // into "Failed to submit score", and the score had in fact saved
+            // perfectly. A UI error was being reported as a database error.
             document.body.insertAdjacentHTML('beforeend', successHTML);
         } else {
             console.log('⏭️ Score not submitted - not better than personal best');
@@ -433,14 +465,14 @@ async function submitScore(gameType, score) {
                             <button onclick="startGame('${gameType}')" style="flex:1; padding:12px; background:var(--primary); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">
                                 Try Again
                             </button>
-                            <button onclick="closeGame(); showGamesMenu();" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
+                            <button onclick="closeGame(); switchView('games');" style="flex:1; padding:12px; background:var(--bg-tertiary); color:var(--text-primary); border:none; border-radius:8px; cursor:pointer;">
                                 Menu
                             </button>
                         </div>
                     </div>
                 </div>
             `;
-            document.getElementById('gameContainer').remove();
+            // Same as above: closeGame() has already removed it.
             document.body.insertAdjacentHTML('beforeend', notBestHTML);
         }
     } catch (error) {
@@ -487,8 +519,7 @@ async function showLeaderboard(gameType) {
             }));
         }
 
-        // Sort by score (lower is better for time-based games)
-        const timeBased = ['oddEmoji', 'reaction'].includes(gameType);
+        const timeBased = isTimeBased(gameType);
         scores.sort((a, b) => timeBased ? a.score - b.score : b.score - a.score);
         scores = scores.slice(0, 10); // Top 10
 
@@ -528,7 +559,7 @@ async function showLeaderboard(gameType) {
                                         </div>
                                     </div>
                                     <div style="font-size:1.1em; font-weight:700; color:var(--primary);">
-                                        ${timeBased ? `${s.score}ms` : s.score}
+                                        ${formatScore(gameType, s.score)}
                                     </div>
                                 </div>
                             `).join('')}
