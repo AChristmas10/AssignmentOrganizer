@@ -1746,6 +1746,11 @@ function initializeAuth() {
             isGuestMode = true;
             const signInButton = document.getElementById('signInButton');
             if (signInButton) signInButton.style.display = 'block';
+            // Guests get the account menu too. It holds the time zone setting
+            // and Install app, neither of which requires an account — and a
+            // guest trying the app out is exactly who wants to install it.
+            const userButton = document.getElementById('userButton');
+            if (userButton) userButton.style.display = 'flex';
         } else {
             handleUserSignedOut();
         }
@@ -2112,15 +2117,120 @@ function timezoneOptions() {
     ).join('');
 }
 
+// ---------------------------------------------------------------------------
+// INSTALL
+//
+// The automatic prompt is unreliable as the ONLY route in, for three separate
+// reasons:
+//   1. iOS Safari never fires beforeinstallprompt at all. Installing there is
+//      Share -> Add to Home Screen, and nothing tells the student that.
+//   2. Chrome only fires it once its own engagement heuristics are satisfied,
+//      which can take several visits.
+//   3. Dismissing our prompt sets installDismissed forever, so a student who
+//      tapped "Later" once can never find it again.
+//
+// So: a permanent entry in the account menu that does the right thing on each
+// platform, rather than a banner that may never appear.
+// ---------------------------------------------------------------------------
+
+/** Already running as an installed app? Then there is nothing to offer. */
+function isInstalled() {
+    return window.matchMedia('(display-mode: standalone)').matches
+        || window.navigator.standalone === true;   // iOS reports it here instead
+}
+
+function isIosSafari() {
+    const ua = navigator.userAgent;
+    const iOS = /iPad|iPhone|iPod/.test(ua)
+        // iPadOS 13+ reports itself as a Mac; the touch points give it away.
+        || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const webkit = /WebKit/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+    return iOS && webkit;
+}
+
+function installMenuLabel() {
+    if (isInstalled()) return 'App installed ✓';
+    return 'Install app';
+}
+
+async function installApp() {
+    if (isInstalled()) {
+        alert('Do2Date is already installed on this device.');
+        return;
+    }
+
+    // Chrome, Edge, Android: we stashed the real prompt, so show it.
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        // The event can only be used once. Clearing it keeps the menu honest
+        // rather than offering a prompt that would silently do nothing.
+        deferredPrompt = null;
+        if (outcome === 'accepted') {
+            localStorage.removeItem('installDismissed');
+        }
+        closeUserMenu();
+        return;
+    }
+
+    // Everywhere else, tell them where the control actually is.
+    closeUserMenu();
+    showInstallHelp();
+}
+
+function showInstallHelp() {
+    const ios = isIosSafari();
+    const steps = ios
+        ? `<ol style="margin:0 0 0 18px; color:var(--text-primary); line-height:1.9;">
+             <li>Tap the <strong>Share</strong> button at the bottom of Safari
+                 <span style="color:var(--text-secondary)">(the square with an arrow)</span></li>
+             <li>Scroll down and tap <strong>Add to Home Screen</strong></li>
+             <li>Tap <strong>Add</strong></li>
+           </ol>
+           <p style="color:var(--text-secondary); font-size:0.85em; margin-top:14px;">
+             iPhones only allow this from Safari — Chrome on iOS cannot install apps.
+           </p>`
+        : `<ol style="margin:0 0 0 18px; color:var(--text-primary); line-height:1.9;">
+             <li>Open your browser's menu <span style="color:var(--text-secondary)">(⋮ or ⋯)</span></li>
+             <li>Look for <strong>Install app</strong>, <strong>Add to Home screen</strong>,
+                 or an install icon in the address bar</li>
+           </ol>
+           <p style="color:var(--text-secondary); font-size:0.85em; margin-top:14px;">
+             Not every browser supports installing. Chrome, Edge and Safari do; Firefox on
+             desktop does not.
+           </p>`;
+
+    const html = `
+        <div id="installHelp" style="position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:3000; display:flex; align-items:center; justify-content:center; padding:20px;" onclick="if(event.target.id==='installHelp') closeInstallHelp()">
+            <div style="background:var(--bg-primary); padding:28px; border-radius:var(--radius-lg); max-width:420px; width:100%; box-shadow:var(--shadow-lg);">
+                <h2 style="margin:0 0 6px 0; color:var(--text-primary); font-size:1.15rem;">Install Do2Date</h2>
+                <p style="color:var(--text-secondary); font-size:0.9em; margin:0 0 18px 0;">
+                    It opens like a normal app, works offline, and can send you deadline reminders.
+                </p>
+                ${steps}
+                <button onclick="closeInstallHelp()" style="width:100%; margin-top:20px; min-height:44px;">Got it</button>
+            </div>
+        </div>`;
+    document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function closeInstallHelp() {
+    const el = document.getElementById('installHelp');
+    if (el) el.remove();
+}
+
 // SHOW USER MENU
 function showUserMenu() {
-    const email = currentUser?.email || 'Guest';
+    const signedIn = !!currentUser && !isGuestMode;
+    const email = currentUser?.email || 'Not signed in';
     const menuHTML = `
         <div id="userMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:16px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:250px;" onclick="event.stopPropagation()">
             <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
-                <div style="font-size:0.85em; color:var(--text-secondary);">Signed in as</div>
-                <div style="font-weight:600; color:var(--text-primary); margin-top:4px; word-break:break-all;">${email}</div>
+                <div style="font-size:0.85em; color:var(--text-secondary);">${signedIn ? 'Signed in as' : 'Account'}</div>
+                <div style="font-weight:600; color:var(--text-primary); margin-top:4px; word-break:break-all;">${escapeHtml(email)}</div>
+                ${signedIn ? '' : '<div style="font-size:0.75em; color:var(--text-secondary); margin-top:6px;">Your classes are saved on this device only.</div>'}
             </div>
+            ${signedIn ? `
             <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
                 <label for="nameInput" style="font-size:0.85em; color:var(--text-secondary); display:block; margin-bottom:6px;">Leaderboard name</label>
                 <input id="nameInput" maxlength="20" value="${escapeHtml(displayName)}" placeholder="Not set yet"
@@ -2129,7 +2239,7 @@ function showUserMenu() {
                 <div style="font-size:0.75em; color:var(--text-secondary); margin-top:6px;">
                     Public. Shown on game leaderboards — never your email.
                 </div>
-            </div>
+            </div>` : ''}
             <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
                 <label for="tzSelect" style="font-size:0.85em; color:var(--text-secondary); display:block; margin-bottom:6px;">Time zone</label>
                 <select id="tzSelect" onchange="setTimeZone(this.value)" style="width:100%; padding:10px; border:2px solid var(--border); border-radius:8px; background:var(--bg-secondary); color:var(--text-primary); min-height:44px;">
@@ -2139,9 +2249,16 @@ function showUserMenu() {
                     Due dates are judged in this zone, not your device's.
                 </div>
             </div>
+            <button onclick="installApp()" ${isInstalled() ? 'disabled' : ''} style="width:100%; text-align:left; padding:10px; margin-bottom:8px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:${isInstalled() ? 'default' : 'pointer'}; color:var(--text-primary); display:flex; align-items:center; gap:8px; min-height:44px; opacity:${isInstalled() ? '0.6' : '1'};">
+                <span>📲</span> ${installMenuLabel()}
+            </button>
+            ${signedIn ? `
             <button onclick="signOutUser()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px; min-height:44px;">
                 <span>🚪</span> Sign Out
-            </button>
+            </button>` : `
+            <button onclick="closeUserMenu(); showAuthModalAgain();" style="width:100%; text-align:left; padding:10px; background:var(--primary); border:none; border-radius:8px; cursor:pointer; color:#fff; display:flex; align-items:center; gap:8px; min-height:44px; font-weight:600;">
+                <span>🔑</span> Sign in to sync
+            </button>`}
         </div>
     `;
 
