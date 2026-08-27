@@ -133,6 +133,23 @@
 <!-- dates.js must load before script.js: script.js reads Do2DateDates at parse
      time. syllabus.js must also precede it, because script.js calls render()
      as soon as it loads and render() now asks Do2DateSyllabus for its section. -->
+<!-- Vercel Web Analytics — visits, unique visitors, referrers, countries.
+     Cookieless: visitors are a hash that rotates daily rather than a stored
+     identifier, so this needs no consent banner.
+
+     The dashboard's setup dropdown only offers frameworks; there is no plain
+     HTML option and "Other" hands you an npm package that needs a bundler this
+     project does not have. Enabling Analytics serves the script from BOTH a
+     randomised path and this stable /_vercel/insights/ one, so the script tag
+     is all that is required.
+
+     The queue shim on the first line catches any va() call that fires before
+     the deferred script finishes loading, rather than throwing. -->
+<script>
+  window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
+</script>
+<script defer src="/_vercel/insights/script.js"></script>
+
 <script src="dates.js?v=47"></script>
 <script src="syllabus.js?v=47"></script>
 <script src="script.js?v=47"></script>
