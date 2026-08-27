@@ -21,8 +21,13 @@
     <meta name="twitter:title" content="Do2Date - Free Student Assignment Tracker">
     <meta name="twitter:description" content="Track your assignments, tests, and due dates all in one place.">
 
-    <!-- Favicon (optional - you can add later) -->
-    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <!-- Favicon. The previous line pointed at favicon.ico, which does not exist
+         in this repo — the browser 404'd and fell back to its default globe.
+         SVG first because it stays crisp at every size and every zoom level;
+         icon-192.png is the fallback for anything that cannot read SVG. -->
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+    <link rel="apple-touch-icon" href="icon-192.png">
 
     <!-- PWA Manifest -->
     <link rel="manifest" href="manifest.json">
@@ -36,7 +41,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=4">
+    <link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 
@@ -57,27 +62,17 @@
 <div class="header-container">
     <h1>Do2Date</h1>
     <div style="display:flex; gap:12px; align-items:center;">
-        <!-- Icons are inline SVG rather than emoji. Emoji render as a different
-             glyph, weight and palette on every operating system, so the header
-             looked like five unrelated pictures rather than one icon set. These
-             use stroke="currentColor", so they inherit the theme automatically
-             and need no separate dark-mode handling. -->
+        <!-- Emoji, deliberately. They vary by operating system, which is the
+             real tradeoff and the reason to think about it — but they are warm,
+             instantly readable, and carry colour that a monochrome icon set
+             does not. The circles are gone: the emoji already have colour and
+             shape of their own, and the grey frames were competing with them. -->
         <button id="signInButton" class="icon-btn icon-btn--text" onclick="showAuthModalAgain()" title="Sign in to sync data" style="display:none;">Sign in</button>
-        <button id="userButton" class="icon-btn" onclick="showUserMenu()" title="Account" aria-label="Account" style="display:none;">
-            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-        <button id="gamesButton" class="icon-btn" onclick="showGamesMenu()" title="Mini games" aria-label="Mini games">
-            <svg viewBox="0 0 24 24"><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><line x1="15" y1="13" x2="15.01" y2="13"/><line x1="18" y1="11" x2="18.01" y2="11"/><rect x="2" y="6" width="20" height="12" rx="4"/></svg>
-        </button>
-        <button id="exportButton" class="icon-btn" onclick="showExportMenu()" title="Export data" aria-label="Export data">
-            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-        </button>
-        <button id="notificationToggle" class="icon-btn" onclick="toggleNotifications()" title="Toggle notifications" aria-label="Toggle notifications">
-            <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
-        </button>
-        <button id="darkModeToggle" class="icon-btn" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode">
-            <svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-        </button>
+        <button id="userButton" class="icon-btn" onclick="showUserMenu()" title="Account" aria-label="Account" style="display:none;">👤</button>
+        <button id="gamesButton" class="icon-btn" onclick="showGamesMenu()" title="Mini games" aria-label="Mini games">🎮</button>
+        <button id="exportButton" class="icon-btn" onclick="showExportMenu()" title="Export data" aria-label="Export data">📤</button>
+        <button id="notificationToggle" class="icon-btn" onclick="toggleNotifications()" title="Toggle notifications" aria-label="Toggle notifications">🔔</button>
+        <button id="darkModeToggle" class="icon-btn" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
     </div>
 </div>
 
@@ -138,10 +133,10 @@
 <!-- dates.js must load before script.js: script.js reads Do2DateDates at parse
      time. syllabus.js must also precede it, because script.js calls render()
      as soon as it loads and render() now asks Do2DateSyllabus for its section. -->
-<script src="dates.js?v=45"></script>
-<script src="syllabus.js?v=45"></script>
-<script src="script.js?v=45"></script>
-<script src="games.js?v=45"></script>
+<script src="dates.js?v=47"></script>
+<script src="syllabus.js?v=47"></script>
+<script src="script.js?v=47"></script>
+<script src="games.js?v=47"></script>
 
 <!-- Firebase SDK -->
 <script type="module">

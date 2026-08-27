@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Browser tabs render this at 16px. The full app icon (icon-192.png) has a
+       calendar, a pencil and three letters, none of which survive that — at 16px
+       it is a purple smudge. This is the same identity reduced to the part that
+       still reads: two heavy characters on the brand gradient. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#g)"/>
+  <text x="32" y="45" font-family="Inter, 'Segoe UI', Helvetica, Arial, sans-serif"
+        font-size="34" font-weight="800" fill="#ffffff" text-anchor="middle"
+        letter-spacing="-1">D2</text>
+</svg>

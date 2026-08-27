@@ -95,37 +95,42 @@ h1 {
    used on phones far more than desktops. The icon inside is 20px; the rest is
    deliberate breathing room, not padding that happened. */
 .icon-btn {
+    /* No border and no filled circle. The emoji already carry colour and a
+       distinct silhouette; framing each one in a grey ring gave the eye five
+       identical rectangles to land on before it reached the icons. */
     background: transparent;
-    border: 1px solid var(--border);
-    width: 44px;
+    border: none;
+    width: 44px;              /* still a full touch target, just an invisible one */
     height: 44px;
     border-radius: var(--radius-md);
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition: background 0.15s ease, opacity 0.15s ease;
     box-shadow: none;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
-    color: var(--text-secondary);
+    font-size: 1.3rem;
+    line-height: 1;
     flex: none;
 }
 
 .icon-btn:hover {
+    /* The hover surface is what tells you it is a button, and it only appears
+       when you are pointing at it. */
     background: var(--bg-tertiary);
-    color: var(--text-primary);
-    border-color: var(--text-secondary);
     /* No transform. The old scale(1.1) made the whole header twitch on hover,
        and on touch devices it fires on tap and looks like a glitch. */
     transform: none;
 }
 
+/* Kept for the few controls that are still SVG rather than emoji. */
 .icon-btn svg {
     width: 20px;
     height: 20px;
     fill: none;
-    stroke: currentColor;      /* inherits the theme; no dark-mode variant needed */
-    stroke-width: 1.75;
+    stroke: currentColor;
+    stroke-width: 1.9;
     stroke-linecap: round;
     stroke-linejoin: round;
     display: block;
@@ -241,6 +246,8 @@ button.btn-danger:hover {
     height: 30px;
     border-radius: var(--radius-sm);
     margin-left: var(--space-3);
+    background: var(--bg-tertiary);
+    font-size: 0.95rem;
     flex: none;
 }
 
@@ -358,6 +365,8 @@ button.btn-danger:hover {
     height: 30px;
     border-radius: var(--radius-sm);
     margin-left: var(--space-3);
+    background: var(--bg-tertiary);
+    font-size: 0.95rem;
     flex: none;
 }
 
@@ -596,6 +605,8 @@ button.btn-danger:hover {
     height: 30px;
     border-radius: var(--radius-sm);
     margin-left: var(--space-3);
+    background: var(--bg-tertiary);
+    font-size: 0.95rem;
     flex: none;
 }
 

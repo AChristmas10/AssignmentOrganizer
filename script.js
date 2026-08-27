@@ -562,7 +562,7 @@ function render() {
                 <span id="toggle-icon-${classIndex}" style="margin-right:8px;">${cls.isOpen ? '▼' : '▶'}</span>
                 <div style="width:8px; height:8px; border-radius:50%; background:${cls.color}; margin-right:10px;"></div>
                 <h2 title="${cls.name}" style="margin:0;">${displayClassName}</h2>
-                <button onclick="event.stopPropagation(); changeClassColor(${classIndex})" class="icon-btn icon-btn--inline" title="Change colour" aria-label="Change class colour"><svg viewBox="0 0 24 24"><circle cx="13.5" cy="6.5" r=".5"/><circle cx="17.5" cy="10.5" r=".5"/><circle cx="8.5" cy="7.5" r=".5"/><circle cx="6.5" cy="12.5" r=".5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></button>
+                <button onclick="event.stopPropagation(); changeClassColor(${classIndex})" class="icon-btn icon-btn--inline" title="Change colour" aria-label="Change class colour">🎨</button>
             </div>
             <span class="assignment-count">${uncompletedCount} assignments</span>
         </div>
@@ -588,8 +588,7 @@ function render() {
                 <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
                     <label style="display:flex; align-items:center; gap:6px; color:var(--text-primary); font-size:0.9em;">
                         <input type="checkbox" id="a-recurring-${classIndex}" onchange="toggleRecurringOptions(${classIndex}, 'assignment')">
-                        <svg viewBox="0 0 24 24" style="width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none;"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
-                        Recurring
+                        🔄 Recurring
                     </label>
                     <select id="a-frequency-${classIndex}" style="display:none; padding:6px; border-radius:6px; border:2px solid var(--border); background:var(--bg-primary); color:var(--text-primary);" onchange="updateRecurringLabel(${classIndex}, 'assignment')">
                         <option value="weekly">Weekly</option>
@@ -648,7 +647,7 @@ function render() {
                 </div>
                 <div style="margin-top:6px; display:flex; gap:8px;">
                     <button onclick="editItem(${classIndex}, ${a.originalIndex}, 'assignment')" class="btn-secondary">Edit</button>
-                    <button onclick="removeAssignment(${classIndex},${a.originalIndex})">Remove</button>
+                    <button onclick="removeAssignment(${classIndex},${a.originalIndex})" class="btn-danger">Remove</button>
                 </div>
             </div>
         `;
@@ -680,7 +679,7 @@ function render() {
                 </div>
                 <div style="margin-top:6px; display:flex; gap:8px;">
                     <button onclick="editItem(${classIndex}, ${t.originalIndex}, 'test')" class="btn-secondary">Edit</button>
-                    <button onclick="removeTest(${classIndex},${t.originalIndex})">Remove</button>
+                    <button onclick="removeTest(${classIndex},${t.originalIndex})" class="btn-danger">Remove</button>
                 </div>
             </div>
         `;
@@ -1378,11 +1377,9 @@ function updateNotificationIcon() {
     const notifBtn = document.getElementById('notificationToggle');
     if (notifBtn) {
         const granted = Notification.permission === 'granted';
-        // A bell with a slash through it, rather than a different emoji. The
-        // slash is the signal; the dimming is reinforcement, not the message.
-        notifBtn.innerHTML = granted
-            ? '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>'
-            : '<svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/><line x1="3" y1="3" x2="21" y2="21"/></svg>';
+        // 🔕 already has the slash through it, so the state is carried by the
+        // glyph itself. The dimming reinforces it rather than being the message.
+        notifBtn.innerHTML = granted ? '🔔' : '🔕';
         notifBtn.classList.toggle('is-off', !granted);
         notifBtn.title = granted ? 'Notifications on' : 'Notifications off';
     }
@@ -1398,9 +1395,7 @@ function updateNotificationIcon() {
  * happened to toggle it.
  */
 function themeIconMarkup(theme) {
-    return theme === 'dark'
-        ? '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>'
-        : '<svg viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+    return theme === 'dark' ? '☀️' : '🌙';
 }
 
 function toggleDarkMode() {
