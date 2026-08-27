@@ -100,7 +100,7 @@ function databaseUrl() {
  * Returns null rather than throwing on a bad token — "your session expired" is
  * an ordinary thing to tell a student, not a server error.
  */
-export async function verifyCaller(authorizationHeader) {
+export async function verifyCaller(authorizationHeader, options = {}) {
   const header = String(authorizationHeader || "");
   if (!header.toLowerCase().startsWith("bearer ")) return null;
 
@@ -115,7 +115,21 @@ export async function verifyCaller(authorizationHeader) {
       audience: id,
     });
     // `sub` is the uid. Firebase also sets user_id; sub is the standard claim.
-    return typeof payload.sub === "string" && payload.sub ? payload.sub : null;
+    const uid = typeof payload.sub === "string" && payload.sub ? payload.sub : null;
+    if (!uid) return null;
+
+    // Callers that only need identity keep getting a plain uid string, so the
+    // syllabus endpoint is untouched. Callers making an authorization decision
+    // ask for the claims and get them from the VERIFIED payload — never from
+    // anything the client sent alongside the token.
+    if (options.withClaims) {
+      return {
+        uid,
+        email: typeof payload.email === "string" ? payload.email : null,
+        emailVerified: payload.email_verified === true,
+      };
+    }
+    return uid;
   } catch (error) {
     // Log the real reason. A student cannot act on "expired" versus "wrong
     // project" versus "cannot reach Google's keys", so they get one message —

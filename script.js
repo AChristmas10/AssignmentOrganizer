@@ -168,6 +168,37 @@ function ensureDisplayName() {
  * codebase goes through here — leaderboard names above all, since those are
  * written by other users and rendered in everyone else's browser.
  */
+/**
+ * Record a one-off milestone against the signed-in user.
+ *
+ * Writes to users/{uid}/ — the subtree the existing security rules already
+ * scope to the owner, so no rule change is needed. Stores the FIRST timestamp
+ * and never overwrites it: "when did they install" is a fact about the past,
+ * and re-recording it on every launch would turn a signup date into a
+ * last-seen date.
+ *
+ * Silent when signed out. Guest installs and guest notification opt-ins are
+ * therefore not counted — worth remembering when reading the numbers, since
+ * they will run low rather than high.
+ */
+function recordMilestone(key) {
+    if (!currentUser || isGuestMode) return;
+    if (localStorage.getItem('milestone:' + key)) return;   // already sent
+    try {
+        const ref = window.firebaseRef(window.firebaseDatabase, `users/${currentUser.uid}/milestones/${key}`);
+        window.firebaseGet(ref).then((snapshot) => {
+            if (snapshot.exists()) {
+                localStorage.setItem('milestone:' + key, '1');
+                return;
+            }
+            window.firebaseSet(ref, new Date().toISOString());
+            localStorage.setItem('milestone:' + key, '1');
+        }).catch(() => { /* a missed stat is not worth surfacing to a student */ });
+    } catch (error) {
+        console.error('Could not record milestone', key, error);
+    }
+}
+
 function escapeHtml(value) {
     return String(value === null || value === undefined ? "" : value)
         .replace(/&/g, "&amp;")
@@ -1369,6 +1400,7 @@ async function toggleNotifications() {
             showTestNotification();
             scheduleNotificationCheck();
             updateNotificationIcon();
+            recordMilestone('notificationsEnabled');
         }
     }
 }
@@ -1504,6 +1536,11 @@ if (dismissInstall) {
 
 // Detect if app is already installed
 window.addEventListener('appinstalled', () => {
+    // Fires however the app was installed — the in-page prompt, the browser's
+    // own address-bar affordance, or "Add to Home Screen" on iOS. Hooking the
+    // install BUTTON instead would miss most real installs, since most people
+    // never see that prompt.
+    recordMilestone('installed');
     console.log('Do2Date was installed');
     // Hide install prompt if visible
     const installPrompt = document.getElementById('installPrompt');
