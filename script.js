@@ -732,35 +732,34 @@ function render() {
 render();
 
 // VIEW SWITCHING
+/**
+ * Show one view, hide the rest.
+ *
+ * Table-driven rather than three parallel lists of getElementById calls, six
+ * style assignments and six classList calls. Adding the Games tab to the old
+ * shape meant touching five places and getting all five right; here it is one
+ * row.
+ */
+const VIEWS = {
+    classes:  { view: 'classesView',  tab: 'classesTab' },
+    allItems: { view: 'allItemsView', tab: 'allItemsTab', onShow: () => renderAllItems() },
+    calendar: { view: 'calendarView', tab: 'calendarTab', onShow: () => renderCalendar() },
+    games:    { view: 'gamesView',    tab: 'gamesTab',    onShow: () => renderGames() },
+};
+
 function switchView(view) {
-    const classesView = document.getElementById('classesView');
-    const allItemsView = document.getElementById('allItemsView');
-    const calendarView = document.getElementById('calendarView');
-    const classesTab = document.getElementById('classesTab');
-    const allItemsTab = document.getElementById('allItemsTab');
-    const calendarTab = document.getElementById('calendarTab');
+    const target = VIEWS[view] ? view : 'classes';
 
-    // Hide all views and deactivate all tabs
-    classesView.style.display = 'none';
-    allItemsView.style.display = 'none';
-    calendarView.style.display = 'none';
-    classesTab.classList.remove('active');
-    allItemsTab.classList.remove('active');
-    calendarTab.classList.remove('active');
-
-    // Show selected view and activate tab
-    if (view === 'classes') {
-        classesView.style.display = 'block';
-        classesTab.classList.add('active');
-    } else if (view === 'allItems') {
-        allItemsView.style.display = 'block';
-        allItemsTab.classList.add('active');
-        renderAllItems();
-    } else if (view === 'calendar') {
-        calendarView.style.display = 'block';
-        calendarTab.classList.add('active');
-        renderCalendar();
+    for (const [name, config] of Object.entries(VIEWS)) {
+        const viewEl = document.getElementById(config.view);
+        const tabEl = document.getElementById(config.tab);
+        const active = name === target;
+        if (viewEl) viewEl.style.display = active ? 'block' : 'none';
+        if (tabEl) tabEl.classList.toggle('active', active);
     }
+
+    const onShow = VIEWS[target].onShow;
+    if (onShow) onShow();
 }
 
 // RENDER ALL ITEMS VIEW
@@ -1155,33 +1154,30 @@ function saveEdit(classIndex, itemIndex, type) {
 }
 
 // EXPORT FUNCTIONS
-function showExportMenu() {
-    const menuHTML = `
-        <div id="exportMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:16px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:200px;" onclick="event.stopPropagation()">
-            <h3 style="margin:0 0 12px 0; color:var(--text-primary); font-size:1em;">Export Data</h3>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <button onclick="exportToGoogleCalendar()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                    <span>📅</span> Google Calendar
-                </button>
-                <button onclick="exportToCSV()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                    <span>📊</span> Download CSV
-                </button>
-                <button onclick="exportToICS()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                    <span>📆</span> Download ICS
-                </button>
-                <button onclick="printSchedule()" style="width:100%; text-align:left; padding:10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                    <span>🖨️</span> Print/PDF
-                </button>
+/**
+ * The export options, as markup for a section of the settings menu.
+ *
+ * These used to hang off their own header icon. Exporting is something you do
+ * occasionally and deliberately, not something worth a permanent slot in a
+ * five-icon row — and a row of five icons is a row nobody reads.
+ */
+function exportSectionHtml() {
+    const OPTIONS = [
+        ['exportToGoogleCalendar()', '📅', 'Google Calendar'],
+        ['exportToICS()',            '📆', 'Download .ics'],
+        ['exportToCSV()',            '📊', 'Download .csv'],
+        ['printSchedule()',          '🖨️', 'Print or save as PDF'],
+    ];
+    return `
+        <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
+            <div style="font-size:0.85em; color:var(--text-secondary); margin-bottom:8px;">Export your schedule</div>
+            <div style="display:flex; flex-direction:column; gap:6px;">
+                ${OPTIONS.map(([fn, icon, label]) => `
+                    <button onclick="closeUserMenu(); ${fn}" style="width:100%; text-align:left; padding:9px 10px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:pointer; color:var(--text-primary); display:flex; align-items:center; gap:10px; min-height:40px; font-size:0.9em;">
+                        <span>${icon}</span> ${label}
+                    </button>`).join('')}
             </div>
-        </div>
-    `;
-
-    document.body.insertAdjacentHTML('beforeend', menuHTML);
-
-    // Close menu when clicking outside
-    setTimeout(() => {
-        document.addEventListener('click', closeExportMenu);
-    }, 100);
+        </div>`;
 }
 
 function closeExportMenu() {
@@ -1770,7 +1766,7 @@ function handleUserSignedIn(user) {
 
     // Show user button
     const userButton = document.getElementById('userButton');
-    if (userButton) userButton.style.display = 'block';
+    if (userButton) userButton.style.display = 'flex';
 
     // Load user's data from Firebase
     loadUserDataFromFirebase(user.uid);
@@ -1791,7 +1787,10 @@ function handleUserSignedOut() {
 
     // Hide user button
     const userButton = document.getElementById('userButton');
-    if (userButton) userButton.style.display = 'none';
+    // Stays visible when signed out. It is now the only route to settings,
+    // export, install and time zone — hiding it would strand a signed-out
+    // student with no way to reach any of them.
+    if (userButton) userButton.style.display = 'flex';
 }
 
 function showAuthModal() {
@@ -2224,7 +2223,7 @@ function showUserMenu() {
     const signedIn = !!currentUser && !isGuestMode;
     const email = currentUser?.email || 'Not signed in';
     const menuHTML = `
-        <div id="userMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:16px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:250px;" onclick="event.stopPropagation()">
+        <div id="userMenu" style="position:fixed; top:76px; right:16px; background:var(--bg-primary); padding:16px; border-radius:var(--radius-lg); box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); width:300px; max-width:calc(100vw - 32px); max-height:calc(100vh - 96px); overflow-y:auto;" onclick="event.stopPropagation()">
             <div style="margin-bottom:12px; padding-bottom:12px; border-bottom:1px solid var(--border);">
                 <div style="font-size:0.85em; color:var(--text-secondary);">${signedIn ? 'Signed in as' : 'Account'}</div>
                 <div style="font-weight:600; color:var(--text-primary); margin-top:4px; word-break:break-all;">${escapeHtml(email)}</div>
@@ -2249,6 +2248,7 @@ function showUserMenu() {
                     Due dates are judged in this zone, not your device's.
                 </div>
             </div>
+            ${exportSectionHtml()}
             <button onclick="installApp()" ${isInstalled() ? 'disabled' : ''} style="width:100%; text-align:left; padding:10px; margin-bottom:8px; background:var(--bg-secondary); border:none; border-radius:8px; cursor:${isInstalled() ? 'default' : 'pointer'}; color:var(--text-primary); display:flex; align-items:center; gap:8px; min-height:44px; opacity:${isInstalled() ? '0.6' : '1'};">
                 <span>📲</span> ${installMenuLabel()}
             </button>

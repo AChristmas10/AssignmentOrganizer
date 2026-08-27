@@ -189,6 +189,7 @@ h1 {
     transition: all 0.2s ease;
     flex: 1;
     min-width: 120px;
+    white-space: nowrap;
 }
 
 .tab-/* ---------- SECONDARY BUTTONS ----------
@@ -758,6 +759,22 @@ button:active {
     background: var(--bg-tertiary);
     color: var(--text-secondary);
     text-decoration: line-through;
+}
+
+/* Four tabs do not fit on one line on a phone. Rather than let them wrap
+   unevenly, put them in a deliberate 2x2. */
+@media (max-width: 560px) {
+    .tabs {
+        gap: 8px;
+        padding: 6px;
+    }
+
+    .tab-button {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+        padding: 11px 8px;
+        font-size: 0.88rem;
+    }
 }
 
 /* ---------- MOBILE RESPONSIVE ---------- */

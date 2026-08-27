@@ -5,77 +5,67 @@ let currentGame = null;
 let gameScores = {}; // Store scores for each game
 
 // Show games menu
-function showGamesMenu() {
-    const menuHTML = `
-        <div id="gamesMenu" style="position:fixed; top:80px; right:20px; background:var(--bg-primary); padding:20px; border-radius:12px; box-shadow:var(--shadow-lg); z-index:1000; border:1px solid var(--border); min-width:350px; max-width:90vw;" onclick="event.stopPropagation()">
-            <h3 style="margin:0 0 16px 0; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
-                🎮 <span>Mini Games</span>
-            </h3>
-            
-            <div style="display:flex; flex-direction:column; gap:10px;">
-                <div class="game-option" onclick="startGame('oddEmoji')" style="padding:12px; background:var(--bg-secondary); border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; justify-content:space-between; align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'">
-                    <div>
-                        <div style="font-weight:600; color:var(--text-primary);">👀 Spot the Odd One</div>
-                        <div style="font-size:0.85em; color:var(--text-secondary); margin-top:2px;">Find the different emoji - 5 rounds</div>
+/**
+ * The list of games, as markup.
+ *
+ * Rendered into the Games tab rather than a floating menu. A modal anchored to
+ * a header icon made sense when games were an easter egg; as a tab they are a
+ * section of the app, and a section should not be a popover.
+ */
+function gamesListHtml() {
+    const GAMES = [
+        ['oddEmoji',   '👀 Spot the Odd One', 'Find the different emoji — 5 rounds'],
+        ['reaction',   '⚡ React!',            'Test your reaction speed — 5 rounds'],
+        ['cubeRunner', '🟦 Cube Runner',       'Jump over obstacles'],
+        ['tower',      '🏗️ Tower',             'Stack blocks as high as you can'],
+        ['pattern',    '🧠 Pattern Master',    'Remember the sequence'],
+    ];
+
+    return `
+        <div style="max-width:800px; margin:0 auto;">
+            <h2 style="margin-bottom:6px;">Mini Games</h2>
+            <p style="color:var(--text-secondary); margin:0 0 20px 0; font-size:0.92em;">
+                A break between assignments. Scores are saved to the leaderboard when you're signed in.
+            </p>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px;">
+                ${GAMES.map(([id, title, blurb]) => `
+                    <div class="game-option" onclick="startGame('${id}')"
+                         style="padding:16px; background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius-lg); cursor:pointer; transition:border-color .15s ease;"
+                         onmouseover="this.style.borderColor='var(--primary)'"
+                         onmouseout="this.style.borderColor='var(--border)'">
+                        <div style="font-weight:600; color:var(--text-primary);">${title}</div>
+                        <div style="font-size:0.85em; color:var(--text-secondary); margin-top:4px;">${blurb}</div>
+                        <div style="margin-top:12px; display:flex; gap:8px;">
+                            <button onclick="event.stopPropagation(); startGame('${id}')" style="font-size:0.85em; padding:7px 14px;">Play</button>
+                            <button onclick="event.stopPropagation(); showLeaderboard('${id}')" class="btn-secondary" style="font-size:0.85em; padding:7px 14px;">Leaderboard</button>
+                        </div>
                     </div>
-                    <button onclick="event.stopPropagation(); showLeaderboard('oddEmoji')" style="padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:6px; font-size:0.85em;">🏆</button>
-                </div>
-                
-                <div class="game-option" onclick="startGame('reaction')" style="padding:12px; background:var(--bg-secondary); border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; justify-content:space-between; align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'">
-                    <div>
-                        <div style="font-weight:600; color:var(--text-primary);">⚡ React!</div>
-                        <div style="font-size:0.85em; color:var(--text-secondary); margin-top:2px;">Test your reaction speed - 5 rounds</div>
-                    </div>
-                    <button onclick="event.stopPropagation(); showLeaderboard('reaction')" style="padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:6px; font-size:0.85em;">🏆</button>
-                </div>
-                
-                <div class="game-option" onclick="startGame('cubeRunner')" style="padding:12px; background:var(--bg-secondary); border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; justify-content:space-between; align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'">
-                    <div>
-                        <div style="font-weight:600; color:var(--text-primary);">🟦 Cube Runner</div>
-                        <div style="font-size:0.85em; color:var(--text-secondary); margin-top:2px;">Jump over obstacles</div>
-                    </div>
-                    <button onclick="event.stopPropagation(); showLeaderboard('cubeRunner')" style="padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:6px; font-size:0.85em;">🏆</button>
-                </div>
-                
-                <div class="game-option" onclick="startGame('tower')" style="padding:12px; background:var(--bg-secondary); border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; justify-content:space-between; align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'">
-                    <div>
-                        <div style="font-weight:600; color:var(--text-primary);">🏗️ Tower</div>
-                        <div style="font-size:0.85em; color:var(--text-secondary); margin-top:2px;">Stack blocks as high as you can</div>
-                    </div>
-                    <button onclick="event.stopPropagation(); showLeaderboard('tower')" style="padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:6px; font-size:0.85em;">🏆</button>
-                </div>
-                
-                <div class="game-option" onclick="startGame('pattern')" style="padding:12px; background:var(--bg-secondary); border-radius:8px; cursor:pointer; transition:all 0.2s; display:flex; justify-content:space-between; align-items:center;" onmouseover="this.style.background='var(--bg-tertiary)'" onmouseout="this.style.background='var(--bg-secondary)'">
-                    <div>
-                        <div style="font-weight:600; color:var(--text-primary);">🧠 Pattern Master</div>
-                        <div style="font-size:0.85em; color:var(--text-secondary); margin-top:2px;">Remember the sequence</div>
-                    </div>
-                    <button onclick="event.stopPropagation(); showLeaderboard('pattern')" style="padding:6px 12px; background:var(--primary); color:white; border:none; border-radius:6px; font-size:0.85em;">🏆</button>
-                </div>
+                `).join('')}
             </div>
-            
-            ${!currentUser ? `
-                <div style="margin-top:12px; padding:10px; background:rgba(99, 102, 241, 0.1); border-radius:6px; font-size:0.85em; color:var(--text-secondary); text-align:center;">
-                    ⚠️ Sign in to save your scores to the leaderboard!
-                </div>
-            ` : ''}
+
+            ${!currentUser || isGuestMode ? `
+                <div style="margin-top:20px; padding:14px; background:var(--bg-tertiary); border-radius:var(--radius-md); font-size:0.88em; color:var(--text-secondary);">
+                    Sign in to save your scores to the leaderboard. You can still play without an account.
+                </div>` : ''}
         </div>
     `;
-
-    document.body.insertAdjacentHTML('beforeend', menuHTML);
-
-    setTimeout(() => {
-        document.addEventListener('click', closeGamesMenu);
-    }, 100);
 }
 
-function closeGamesMenu() {
-    const menu = document.getElementById('gamesMenu');
-    if (menu) {
-        menu.remove();
-        document.removeEventListener('click', closeGamesMenu);
-    }
+function renderGames() {
+    const container = document.getElementById('gamesContainer');
+    if (container) container.innerHTML = gamesListHtml();
 }
+
+
+/**
+ * No-op now that the games list is a tab rather than a floating menu.
+ *
+ * Kept rather than deleted because startGame() and closeGame() both call it,
+ * and removing it would throw mid-game. Left as one line so the next person to
+ * read it sees the intent instead of hunting for a menu that does not exist.
+ */
+function closeGamesMenu() { /* the games list is a tab; nothing to close */ }
 
 // Start a game
 function startGame(gameType) {

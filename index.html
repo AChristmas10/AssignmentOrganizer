@@ -41,7 +41,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <link rel="stylesheet" href="style.css?v=5">
+    <link rel="stylesheet" href="style.css?v=6">
 </head>
 <body>
 
@@ -68,9 +68,7 @@
              does not. The circles are gone: the emoji already have colour and
              shape of their own, and the grey frames were competing with them. -->
         <button id="signInButton" class="icon-btn icon-btn--text" onclick="showAuthModalAgain()" title="Sign in to sync data" style="display:none;">Sign in</button>
-        <button id="userButton" class="icon-btn" onclick="showUserMenu()" title="Account" aria-label="Account" style="display:none;">👤</button>
-        <button id="gamesButton" class="icon-btn" onclick="showGamesMenu()" title="Mini games" aria-label="Mini games">🎮</button>
-        <button id="exportButton" class="icon-btn" onclick="showExportMenu()" title="Export data" aria-label="Export data">📤</button>
+        <button id="userButton" class="icon-btn" onclick="showUserMenu()" title="Settings" aria-label="Settings">👤</button>
         <button id="notificationToggle" class="icon-btn" onclick="toggleNotifications()" title="Toggle notifications" aria-label="Toggle notifications">🔔</button>
         <button id="darkModeToggle" class="icon-btn" onclick="toggleDarkMode()" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
     </div>
@@ -80,6 +78,7 @@
     <button id="classesTab" class="tab-button active" onclick="switchView('classes')">My Classes</button>
     <button id="allItemsTab" class="tab-button" onclick="switchView('allItems')">All Items</button>
     <button id="calendarTab" class="tab-button" onclick="switchView('calendar')">Calendar</button>
+    <button id="gamesTab" class="tab-button" onclick="switchView('games')">Games</button>
 </div>
 
 <div id="classesView">
@@ -97,6 +96,10 @@
 
 <div id="calendarView" style="display:none;">
     <div id="calendarContainer"></div>
+</div>
+
+<div id="gamesView" style="display:none;">
+    <div id="gamesContainer"></div>
 </div>
 
 <!-- Auth Modal -->
@@ -150,10 +153,10 @@
 </script>
 <script defer src="/_vercel/insights/script.js"></script>
 
-<script src="dates.js?v=48"></script>
-<script src="syllabus.js?v=48"></script>
-<script src="script.js?v=48"></script>
-<script src="games.js?v=48"></script>
+<script src="dates.js?v=50"></script>
+<script src="syllabus.js?v=50"></script>
+<script src="script.js?v=50"></script>
+<script src="games.js?v=50"></script>
 
 <!-- Firebase SDK -->
 <script type="module">
